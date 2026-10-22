@@ -203,7 +203,7 @@
             </div>
         </div>
 
-        <!-- 배차 상세 및 내 정산 입력 모달 (스마트운행일보 제거됨) -->
+        <!-- 배차 상세 및 내 정산 입력 모달 -->
         <div id="detail-modal-overlay" class="modal-overlay-custom" onclick="closeDetailModal()">
             <div class="modal-card" style="max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
                 <h4 id="detail-modal-title" style="color: #007bff; font-size: 1.3rem; margin-bottom: 15px;"></h4>
@@ -260,6 +260,7 @@
                 <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">집계</button>
                 <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 0.75rem;">로그아웃</button>
             </div>
+            </div>
         </div>
 
         <div class="dispatch-container">
@@ -271,6 +272,7 @@
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
                             <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
+                            <button onclick="changeMonth(-1)">&lt;</button>
                             <button onclick="changeMonth(1)">&gt;</button>
                         </div>
                     </div>
@@ -295,7 +297,7 @@
             </div>
 
             <div class="sidebar-section">
-                <!-- 로그인한 아이디(currentUser) 전용 월간 정산 요약 (일보 버튼 제거됨) -->
+                <!-- 로그인한 아이디(currentUser) 전용 월간 정산 요약 -->
                 <div id="monthly-summary-container" style="margin-bottom: 25px;"></div>
 
                 <div style="margin-bottom: 20px; background: #e8f0fe; padding: 12px; border-radius: 6px; border: 1px dashed #007bff;">
@@ -426,7 +428,6 @@
         const db = firebase.firestore();
         const storage = firebase.storage(); 
 
-        // 오프라인 캐시(임시저장) 및 멀티 탭 동기화 활성화
         db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
             console.log("캐시 활성화 실패:", err);
         });
@@ -478,6 +479,7 @@
         let currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`; 
         
         let dailyDriverStatus = {}; 
+        let autoDutyByDate = {}; // 🚀 날짜별 자동 계산된 당번(당직) 저장소
         let allReservations = [];
         let dailyMemos = {}; 
         let dailyAttachments = {};
@@ -523,7 +525,7 @@
             }
 
             localStorage.setItem('loggedInUser', id);
-            localStorage.setItem('userRole', 'admin'); // 통합 창에서 모든 기능을 사용할 수 있도록 관리자 권한 부여
+            localStorage.setItem('userRole', 'admin');
             localStorage.setItem('loggedInPw', realPw); 
             window.location.reload(); 
         }
@@ -960,11 +962,104 @@
             return dailyDriverStatus[date][driver] || '출근';
         }
 
+        // 🚀 해당 날짜의 당번(당직) 명단 가져오기 (자동 + 수동 통합)
+        function getDutyDriversForDate(date) {
+            return autoDutyByDate[date] || [];
+        }
+
+        // 🚀 당번(당직) 자동 순환 계산 엔진
+        // 규칙: 주말/공휴일 제외, 함동한 제외, 휴무자 제외, 당일 운행자 제외(4일전 취소자는 포함), 직전 당번 다음 순번부터 배정
+        function calculateAutoDuty() {
+            autoDutyByDate = {};
+            if (!loadedStartStr || !loadedEndStr) return;
+
+            let cur = new Date(loadedStartStr);
+            const end = new Date(loadedEndStr);
+            let lastDutyDriver = null;
+
+            while (cur <= end) {
+                const y = cur.getFullYear();
+                const m = cur.getMonth() + 1;
+                const d = cur.getDate();
+                const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayOfWeek = cur.getDay();
+                const isHoliday = getHolidayName(y, m, d) !== null;
+
+                // 1. 주말(토·일) 및 공휴일은 당번 없음
+                if (dayOfWeek === 0 || dayOfWeek === 6 || isHoliday) {
+                    autoDutyByDate[dateStr] = [];
+                    cur.setDate(cur.getDate() + 1);
+                    continue;
+                }
+
+                // 2. 해당 날짜의 유효 운행자 파악 (4일전 취소된 배차는 운행자에서 제외 -> 당번 가능!)
+                const dayRes = allReservations.filter(r => (r.dates || []).includes(dateStr));
+                const workingDrivers = new Set();
+                dayRes.forEach(r => {
+                    if (!r.isCanceled) {
+                        (r.assigned || []).forEach(drv => workingDrivers.add(drv));
+                    }
+                });
+
+                const statusData = dailyDriverStatus[dateStr] || {};
+                // 수동으로 지정된 당직자가 있고, 그 사람이 당일 유효 운행이나 휴무가 아니면 수동 지정 우선(기준점 역할)
+                const manualDuty = Object.keys(statusData).filter(drv =>
+                    statusData[drv] === '당직' &&
+                    drv !== '함동한' &&
+                    !workingDrivers.has(drv)
+                );
+
+                if (manualDuty.length > 0) {
+                    autoDutyByDate[dateStr] = manualDuty;
+                    lastDutyDriver = manualDuty[manualDuty.length - 1];
+                } else if (dayRes.length > 0) {
+                    // 3. 배차가 등록된 평일: 직전 당번의 다음 순번부터 조건에 맞는 첫 번째 운전원 자동 선발
+                    const currentList = getEffectiveDriverList(dateStr);
+                    let startIndex = 0;
+                    if (lastDutyDriver && currentList.includes(lastDutyDriver)) {
+                        startIndex = (currentList.indexOf(lastDutyDriver) + 1) % currentList.length;
+                    }
+
+                    let picked = null;
+                    for (let i = 0; i < currentList.length; i++) {
+                        const candidate = currentList[(startIndex + i) % currentList.length];
+                        if (candidate === '함동한') continue; // 함동한 제외
+                        if (getDriverStatus(dateStr, candidate) === '휴무') continue; // 휴무자 제외
+                        if (workingDrivers.has(candidate)) continue; // 당일 운행자 제외 (취소자는 통과)
+
+                        picked = candidate;
+                        break;
+                    }
+
+                    if (picked) {
+                        autoDutyByDate[dateStr] = [picked];
+                        lastDutyDriver = picked;
+                    } else {
+                        autoDutyByDate[dateStr] = [];
+                    }
+                } else {
+                    autoDutyByDate[dateStr] = [];
+                }
+
+                cur.setDate(cur.getDate() + 1);
+            }
+        }
+
         function handleStatusChange(driver, newStatus, oldStatus) {
             if (newStatus === '휴무') {
                 if (!confirm(`${driver} 운전원 휴무 사용하시겠습니까?`)) { renderStatusPanel(currentDate); return; }
             }
             if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
+
+            // 수동으로 특정 운전원을 '당직'으로 찍으면 기존 수동 당직을 해제하고 해당 운전원을 기준점으로 설정
+            if (newStatus === '당직') {
+                Object.keys(dailyDriverStatus[currentDate]).forEach(k => {
+                    if (dailyDriverStatus[currentDate][k] === '당직') {
+                        dailyDriverStatus[currentDate][k] = '출근';
+                    }
+                });
+            }
+
             dailyDriverStatus[currentDate][driver] = newStatus;
             
             recalculateAll(true); 
@@ -1072,6 +1167,9 @@
                     pointer = currentList.indexOf(res.nextPointerDriver);
                 }
             });
+
+            // 🚀 배차 계산 직후 당번(당직) 자동 순번 계산 실행!
+            calculateAutoDuty();
 
             if (shouldSaveToDB) {
                 const oldReservations = JSON.parse(originalStateString);
@@ -1301,9 +1399,10 @@
 
             const statusData = dailyDriverStatus[date] || {};
             const offDrivers = Object.keys(statusData).filter(d => statusData[d] === '휴무');
-            const dutyDrivers = Object.keys(statusData).filter(d => statusData[d] === '당직');
+            const dutyDrivers = getDutyDriversForDate(date); // 🚀 자동+수동 당번 불러오기
 
             let statusHTML = '';
+            // 🚀 휴무자 바로 위 (휴무자가 없으면 칸 맨 밑)에 당직 표시
             if (dutyDrivers.length > 0) {
                 statusHTML += `<div class="cal-status duty"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
             }
@@ -1336,7 +1435,6 @@
             let routeText = `[${d.start || '미입력'} ➔ ${d.end || '미입력'}]<br>${d.dest || '내용 없음'}`;
             document.getElementById('detail-modal-dest').innerHTML = routeText; 
 
-            // 로그인한 아이디(currentUser) 기준 정산 입력창 세팅
             document.getElementById('settle-user-title').innerText = `👤 ${currentUser}님 운행 시간(정산) 입력`;
             document.getElementById('settle-res-id').value = id;
             document.getElementById('settle-date').value = clickedDate;
@@ -1387,7 +1485,6 @@
             let outT = parseFloat(clockOutStr);
             if (isNaN(inT) || isNaN(outT)) return { overtime: 0, allowance: 0 };
 
-            // 25, 26 입력 호환 및 자정 이후(0, 1시 등) 입력 자동 보정
             if (outT < inT) outT += 24;
 
             let dObj = new Date(dateStr);
@@ -1399,7 +1496,6 @@
             let inside = 0;
             let outside = 0;
 
-            // 시티투어(야): 출근 시간부터 9시간은 기본 근무로 인정
             if (type && (type.includes('시티투어(야)') || type.includes('시티(야)'))) {
                 let baseEnd = inT + 9;
                 let rawInside = Math.max(0, Math.min(outT, baseEnd) - inT);
@@ -1522,7 +1618,6 @@
             });
         }
 
-        // 로그인한 아이디(currentUser)의 정산 내역만 보여주는 월간 정산 요약
         function renderMonthlySummary() {
             const container = document.getElementById('monthly-summary-container');
             if (!container) return;
@@ -1645,7 +1740,6 @@
                     
                     if ((d.assigned || []).length === 0) assignedNamesHTML = '인원 부족';
 
-                    // 로그인한 아이디(currentUser)의 정산 내역만 표시
                     let reportText = '';
                     const mySettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][date]) ? d.settlement[currentUser][date] : null;
                     if (mySettle) {
@@ -1673,7 +1767,7 @@
 
             const statusData = dailyDriverStatus[date] || {};
             const offDrivers = Object.keys(statusData).filter(d => statusData[d] === '휴무');
-            const dutyDrivers = Object.keys(statusData).filter(d => statusData[d] === '당직');
+            const dutyDrivers = getDutyDriversForDate(date); // 🚀 자동+수동 당번 불러오기
 
             if (dutyDrivers.length > 0 || offDrivers.length > 0) {
                 html += `<li style="background-color: #fff; border: 2px dashed #007bff; margin-top: 10px; border-radius: 6px;">`;
@@ -1720,15 +1814,21 @@
             container.innerHTML = '';
             
             const currentDrivers = getEffectiveDriverList(date);
+            const dutyDrivers = getDutyDriversForDate(date);
+
             currentDrivers.forEach(driver => {
-                const currentStatus = getDriverStatus(date, driver);
+                const rawStatus = getDriverStatus(date, driver);
+                const isDuty = dutyDrivers.includes(driver);
+                // 휴무가 아니면서 자동/수동 당직에 해당하면 '당직'에 체크 표시
+                const displayStatus = (rawStatus === '휴무') ? '휴무' : (isDuty ? '당직' : '출근');
+
                 container.innerHTML += `
-                    <div class="status-item">
+                    <div class="status-item" style="${isDuty ? 'border-color:#f29900; background:#fffdf5;' : ''}">
                         <strong>${driver}</strong>
                         <div class="radio-group">
-                            <label><input type="radio" name="st_${driver}" value="출근" ${currentStatus === '출근' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '출근', '${currentStatus}')">출근</label>
-                            <label><input type="radio" name="st_${driver}" value="당직" ${currentStatus === '당직' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '당직', '${currentStatus}')">당직</label>
-                            <label><input type="radio" name="st_${driver}" value="휴무" ${currentStatus === '휴무' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '휴무', '${currentStatus}')">휴무</label>
+                            <label><input type="radio" name="st_${driver}" value="출근" ${displayStatus === '출근' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '출근', '${displayStatus}')">출근</label>
+                            <label><input type="radio" name="st_${driver}" value="당직" ${displayStatus === '당직' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '당직', '${displayStatus}')">당직</label>
+                            <label><input type="radio" name="st_${driver}" value="휴무" ${displayStatus === '휴무' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '휴무', '${displayStatus}')">휴무</label>
                         </div>
                     </div>`;
             });
@@ -1765,7 +1865,6 @@
                 document.getElementById('app-container').style.display = 'none';
                 return false;
             } else {
-                // 통합 화면: 누구나 로그인하면 메인(관리자) 화면으로 바로 진입
                 document.getElementById('login-container').style.display = 'none';
                 document.getElementById('app-container').style.display = 'block';
                 document.getElementById('welcome-msg').innerText = `${getDispName(currentUser)}님 통합관리`;
@@ -1793,7 +1892,6 @@
             }
         };
 
-        // 스마트폰 뒤로가기 시 팝업 닫기 방어 코드
         (function() {
             const pushModalState = () => history.pushState({ isModal: true }, '', '');
             const popModalState = () => { if (history.state && history.state.isModal) history.back(); };
