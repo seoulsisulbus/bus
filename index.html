@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
+    <title>배차관리 시스템 (통합)</title>
+    
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f6f9; color: #333; letter-spacing: -0.3px; }
+        
+        #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #eef2f7; }
+        .login-card { background: #fff; padding: 40px 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 340px; text-align: center; }
+        .login-card h2 { margin-bottom: 25px; color: #007bff; font-size: 1.5rem; letter-spacing: -1px; }
+        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ced4da; font-size: 1rem; font-family: inherit; }
+        .btn-login { width: 100%; padding: 14px; background: #007bff; color: #fff; border: none; border-radius: 6px; font-weight: 700; font-size: 1.05rem; cursor: pointer; transition: 0.2s; }
+        .btn-login:hover { background: #0056b3; }
+        .btn-login:disabled { background: #888; cursor: not-allowed; }
+
+        #app-container { display: none; }
+
+        .dispatch-container { display: flex; max-width: 1600px; margin: 20px auto; gap: 20px; padding: 0 20px; }
+        .main-section { flex: 3.5; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+        .sidebar-section { width: 300px; min-width: 260px; max-width: 800px; flex-shrink: 0; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: fit-content; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 1.25rem; font-weight: 700; }
+        .calendar-header button { padding: 4px 12px; font-size: 1.1rem; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; font-family: inherit; }
+        
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, minmax(155px, 1fr)) !important; 
+            gap: 4px; 
+            overflow-x: auto; 
+            padding-bottom: 5px; 
+        }
+        .calendar-day-header { font-weight: 700; text-align: center; padding: 8px; background: #eef2f7; border-radius: 4px; font-size: 0.95rem; }
+        .calendar-day-header.sun { color: #d9534f; }
+        .calendar-day-header.sat { color: #0275d8; }
+
+        .calendar-cell { 
+            min-width: 0 !important;
+            min-height: 160px; 
+            background: #fff; 
+            border: 1px solid #e1e4e8; 
+            border-radius: 4px; 
+            padding: 3px !important; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+        }
+        .calendar-cell:hover { background: #fafbfc; }
+        .calendar-cell.selected { border: 2px solid #007bff; background: #f0f7ff; }
+        .calendar-cell.sun .date-num { color: #d9534f; font-weight: 700; }
+        .calendar-cell.sat .date-num { color: #0275d8; font-weight: 700; }
+        .calendar-cell.holiday .date-num { color: #d9534f !important; font-weight: 700; }
+        .holiday-name { font-size: 0.8rem; color: #d9534f; font-weight: 700; letter-spacing: -0.5px; text-align: right; word-break: keep-all; margin-left: 4px; }
+
+        .tag-container { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; flex: 1; width: 100%; }
+        
+        .event-box { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 1px !important; 
+            padding: 2px 2px !important; 
+            border-radius: 4px; 
+            font-size: 0.8rem !important; 
+            letter-spacing: -0.8px !important; 
+            font-weight: 700; 
+            max-width: 100%; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        .event-box.pub { background-color: #e8f0fe; border: 1px solid #c6dafc; color: #333; } 
+        .event-box.grave { background-color: #e8f5e9; border: 1px solid #c8e6c9; color: #333; } 
+        .event-box.night1 { background-color: #fff8e1; border: 1px solid #ffecb3; color: #333; } 
+        .event-box.night2 { background-color: #fbe9e7; border: 1px solid #ffccbc; color: #333; } 
+        .event-box.seoul { background-color: #e0f7fa; border: 1px solid #b2ebf2; color: #333; } 
+        .event-box.citytour { background-color: #f3e5f5; border: 1px solid #e1bee7; color: #333; } 
+        .event-box.default { background-color: #f1f3f4; border: 1px solid #d8dbe0; color: #333; }
+
+        .badge { padding: 2px 4px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-align: center; }
+        .badge.pub { background-color: #007bff; color: #fff; } 
+        .badge.grave { background-color: #28a745; color: #fff; } 
+        .badge.night1 { background-color: #ffc107; color: #000; } 
+        .badge.night2 { background-color: #fd7e14; color: #fff; } 
+        .badge.seoul { background-color: #00bcd4; color: #fff; } 
+        .badge.citytour { background-color: #9c27b0; color: #fff; } 
+        .badge.default { background-color: #6c757d; color: #fff; }
+        .badge.manual-badge { background-color: #dc3545 !important; color: #fff !important; }
+
+        .early-underline { text-decoration: underline; text-decoration-color: #dc3545; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+
+        .cal-status { font-size: 0.75rem; margin-top: 2px; letter-spacing: -0.3px; }
+
+        .status-header { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; }
+        .status-header h3 { margin: 0; font-size: 1.15rem; }
+        .btn-edit-drivers { background: #6c757d; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
+
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+        .status-item { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 6px; text-align: center; }
+        .radio-group { margin-top: 8px; display: flex; justify-content: center; gap: 6px; font-size: 0.8rem; }
+        
+        .sidebar-section h3 { margin-bottom: 15px; font-size: 1.15rem; border-bottom: 2px solid #007bff; padding-bottom: 8px; }
+        .vehicle-item { border: 1px solid #e1e4e8; border-radius: 6px; margin-bottom: 10px; background: #fafbfc; overflow: hidden; }
+        .vehicle-header { display: flex; align-items: center; padding: 14px 12px; cursor: pointer; gap: 10px; font-weight: 600; font-size: 1rem; }
+        .vehicle-body { display: none; padding: 15px; border-top: 1px solid #e1e4e8; background: #fff; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: #555; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; font-family: inherit; }
+        .form-group select:disabled { background-color: #e9ecef; cursor: not-allowed; }
+        .chk-group label { color: #d9534f; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap:6px; }
+        
+        .result-list { list-style: none; padding: 0; margin-top: 10px; }
+        .result-list li { background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; margin-bottom: 8px; border-radius: 4px; font-size: 0.95rem; line-height: 1.5; }
+        
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: 700; color: #007bff; flex-direction: column; gap: 10px; }
+        .modal-overlay-custom { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9000; display: none; justify-content: center; align-items: center; }
+        .modal-card { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+        .modal-card h4 { margin-bottom: 10px; font-size: 1.1rem; color: #d9534f; }
+        .modal-card p { font-size: 0.8rem; color: #666; margin-bottom: 15px; }
+        .edit-list { list-style: none; margin-bottom: 15px; max-height: 250px; overflow-y: auto; }
+        .edit-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #eee; margin-bottom: 4px; background: #fafbfc; border-radius: 4px; font-weight: 600; }
+        .edit-list button { padding: 4px 8px; margin-left: 4px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-up { background: #e2e3e5; }
+        .btn-del { background: #f8d7da; color: #721c24; }
+        .add-box { display: flex; gap: 5px; margin-bottom: 15px; }
+        .add-box input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+        .add-box button { padding: 8px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+
+        @media (max-width: 768px) {
+            .dispatch-container { flex-direction: column; padding: 10px; margin: 10px auto; gap: 10px; }
+            .sidebar-section { width: 100%; padding: 15px; }
+            .event-box { font-size: 0.75rem; padding: 2px 4px; }
+            .status-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <datalist id="start-place-list"></datalist>
+    <datalist id="end-place-list"></datalist>
+
+    <!-- 로그인 화면 -->
+    <div id="login-container">
+        <div class="login-card">
+            <h2>배차 시스템 로그인</h2>
+            <input type="text" id="login-id" class="login-input" placeholder="이름 (또는 아이디) 입력" autocomplete="off" onkeypress="if(event.key==='Enter') handleLogin()">
+            <input type="password" id="login-pw" class="login-input" placeholder="비밀번호 입력" autocomplete="new-password" onkeypress="if(event.key==='Enter') handleLogin()">
+            <button id="btn-login" class="btn-login" onclick="handleLogin()">접속하기</button>
+        </div>
+    </div>
+
+    <!-- 메인 통합 앱 화면 -->
+    <div id="app-container">
+        <div id="loading-overlay"><div id="loading-text">서버 연결 중...</div></div>
+
+        <!-- 운전원 순번/엔진 설정 모달 -->
+        <div id="modal-overlay" class="modal-overlay-custom">
+            <div class="modal-card">
+                <h4>운전원 명단 및 엔진 설정</h4>
+                <p id="modal-date-text"></p>
+                
+                <div style="background: #e8f0fe; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
+                    <label style="font-weight: 700; color: #0056b3; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="use-b-engine" style="width: 18px; height: 18px;"> B엔진 (업무별 우선 배차) 사용
+                    </label>
+                    <p style="font-size: 0.75rem; color: #555; margin-top: 6px; margin-bottom: 0;">※ 1순위(공공/1박), 2순위(성묘), 3순위(시티) 업무별로 차례대로 분류 후, 차량 번호순(1~14호차) 직진 배차합니다.</p>
+                </div>
+
+                <ul class="edit-list" id="edit-list-ul"></ul>
+                <div class="add-box">
+                    <input type="text" id="new-driver-name" placeholder="새 운전원 이름">
+                    <button onclick="addDriverToList()">추가</button>
+                </div>
+                <div class="modal-btns">
+                    <button style="background: #007bff; color:#fff;" onclick="saveDriverList()">변경 저장</button>
+                    <button style="background: #ccc;" onclick="closeDriverModal()">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 비밀번호 변경 모달 -->
+        <div id="pw-modal-overlay" class="modal-overlay-custom" onclick="closePwModal()">
+            <div class="modal-card" style="max-width: 320px;" onclick="event.stopPropagation()">
+                <h4 style="color: #007bff; margin-bottom:15px;">🔑 비밀번호 변경</h4>
+                <div class="form-group"><input type="password" id="current-pw" placeholder="현재 비밀번호"></div>
+                <div class="form-group"><input type="password" id="new-pw" placeholder="새 비밀번호 (4자리 이상)"></div>
+                <div class="form-group"><input type="password" id="new-pw-confirm" placeholder="새 비밀번호 확인"></div>
+                <div class="modal-btns" style="margin-top: 15px;">
+                    <button style="background: #28a745; color:#fff;" onclick="changePassword()">변경 저장</button>
+                    <button style="background: #ccc;" onclick="closePwModal()">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 배차 상세 및 내 정산 입력 모달 (스마트운행일보 제거됨) -->
+        <div id="detail-modal-overlay" class="modal-overlay-custom" onclick="closeDetailModal()">
+            <div class="modal-card" style="max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                <h4 id="detail-modal-title" style="color: #007bff; font-size: 1.3rem; margin-bottom: 15px;"></h4>
+                <div style="font-size: 1.05rem; line-height: 2; margin-bottom: 15px;">
+                    <p style="margin:0;"><span style="color:#888; display:inline-block; width:65px;">운전원</span> <b id="detail-modal-drivers" style="color:#333;"></b></p>
+                    <p style="margin:0;"><span style="color:#888; display:inline-block; width:65px;">내 용</span> <b id="detail-modal-dest" style="color:#d9534f;"></b></p>
+                </div>
+
+                <!-- 로그인한 아이디(currentUser) 기준 정산 입력창 -->
+                <div id="settlement-container" style="background:#f0fdf4; border:2px solid #28a745; border-radius:6px; padding:15px; margin-bottom:15px;">
+                    <h5 id="settle-user-title" style="margin-bottom:10px; color:#155724; font-size:1.05rem;">운행 시간 입력</h5>
+                    
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <label style="font-weight:bold; cursor:pointer; color:#d9534f;">
+                            <input type="checkbox" id="settle-early" style="transform:scale(1.2); margin-right:5px;"> 선운행 (달력에 빨간 밑줄 표시)
+                        </label>
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:5px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.85rem; font-weight:bold; color:#555;">출근 (예: 7.5)</label>
+                            <input type="number" id="settle-in" step="0.1" placeholder="7.5" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:5px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.85rem; font-weight:bold; color:#555;">퇴근 (예: 18.5)</label>
+                            <input type="number" id="settle-out" step="0.1" placeholder="18.5" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:5px;">
+                        </div>
+                    </div>
+                    <p style="font-size:0.75rem; color:#888; margin-top:5px; margin-bottom:0;">※ 휴게 차감, 주말/평일 초과배율 및 일비가 자동 계산됩니다.</p>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 15px;">
+                        <button onclick="saveSettlement()" style="flex: 1; padding:12px; background:#28a745; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:1rem;">입 력 (저장)</button>
+                        <button onclick="deleteSettlement()" style="padding:12px 15px; background:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9rem; white-space: nowrap;">🗑️ 삭제</button>
+                    </div>
+                    <input type="hidden" id="settle-res-id">
+                    <input type="hidden" id="settle-date">
+                </div>
+
+                <div id="detail-modal-img-container" style="text-align: center; margin-bottom: 15px; display: none;"></div>
+                
+                <div style="text-align: right;">
+                    <button style="padding: 8px 20px; background: #6c757d; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="closeDetailModal()">닫기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 상단 바 (집계 & 로그아웃 버튼 사이즈 통일) -->
+        <div style="max-width: 1600px; margin: 10px auto 0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+            <div onclick="openPwModal()" style="cursor: pointer; display: flex; align-items: center; gap: 5px;" title="비밀번호 변경">
+                <span id="welcome-msg" style="font-weight: bold; color: #333; font-size: 1.15rem;"></span>
+                <span style="font-size: 1.2rem; opacity: 0.8;">⚙️</span>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">집계</button>
+                <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">로그아웃</button>
+            </div>
+        </div>
+
+        <div class="dispatch-container">
+            <div class="main-section">
+                <div class="card">
+                    <div class="calendar-header">
+                        <span id="month-display">26년 10월</span>
+                        <!-- 정비 & PC버전 버튼 사이즈 통일 -->
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">정비</button>
+                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">PC버전</button>
+                            <button onclick="changeMonth(-1)">&lt;</button>
+                            <button onclick="changeMonth(1)">&gt;</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 10px;">
+                        <h3 id="result-title" style="margin:0;">최종 배차 결과</h3>
+                        <button id="btn-memo" onclick="handleMemo()" style="background:#ffc107; color:#000; border:1px solid #e0a800; border-radius:4px; padding:4px 8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">📝 공지/메모</button>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #007bff; margin-bottom: 8px; font-weight: 600;">💡 배차 내역(또는 달력 배지)을 누르면 운행 시간(정산) 입력 및 첨부파일 확인이 가능합니다.</p>
+                    <ul id="result-content" class="result-list">
+                        <li style="color:#666;">선택된 날짜의 예약 내역이 없습니다.</li>
+                    </ul>
+                    <div class="status-header">
+                        <h3>일일 운전자 상태</h3>
+                        <button class="btn-edit-drivers" onclick="openDriverEditModal()">⚙️ 운전원 순번/명단 관리</button>
+                    </div>
+                    <div class="status-grid" id="status-container"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <!-- 로그인한 아이디(currentUser) 전용 월간 정산 요약 (일보 버튼 제거됨) -->
+                <div id="monthly-summary-container" style="margin-bottom: 25px;"></div>
+
+                <div style="margin-bottom: 20px; background: #e8f0fe; padding: 12px; border-radius: 6px; border: 1px dashed #007bff;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label style="margin: 0; font-size: 1rem; font-weight: 800; color: #0056b3;">📎 이 날짜의 신청서 추가</label>
+                        <input type="file" id="daily-upload-file" style="font-size: 0.85rem; cursor: pointer; width: 100%; background: #fff; padding: 4px; border-radius: 4px; border: 1px solid #ccc;" onchange="uploadDailyFile()">
+                    </div>
+                    <div id="daily-upload-status" style="font-size: 0.85rem; color: #dc3545; font-weight: bold; margin-top: 8px; display: none;">🚀 서버에 올리는 중입니다...</div>
+                    <ul id="daily-attachment-list" style="list-style: none; padding: 0; margin: 0;"></ul>
+                </div>
+
+                <h3>배차 예약 정보 입력</h3>
+                <script>
+                    const busList = ['1호차', '2호차', '3호차', '예비버스'];
+                    const solatiList = ['11호차', '12호차', '13호차', '14호차', '3818'];
+                    
+                    const formTemplate = (v, isBus) => `
+                        <div class="vehicle-item">
+                            <div class="vehicle-header">
+                                <input type="checkbox" id="v_${v}" onclick="toggleVehicleForm('${v}', this, ${isBus})">
+                                <label for="v_${v}" style="cursor: pointer; flex: 1;">${v} (${v === '3818' ? '스타리아' : (isBus ? '버스' : '쏠라티')})</label>
+                            </div>
+                            <div class="vehicle-body" id="form_${v}">
+                                <div style="display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 12px;">
+                                    <button style="flex: 1.2; background: #007bff; color: white; border: none; padding: 6px 2px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.8rem;" onclick="makeReservation('${v}', ${isBus})">예약 등록</button>
+                                    <button style="flex: 1; background: #dc3545; color: white; border: none; padding: 6px 2px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.8rem;" onclick="cancelReservation('${v}')">취소</button>
+                                    <button style="flex: 1.2; background: #6c757d; color: white; border: none; padding: 6px 2px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.7rem; letter-spacing: -0.5px;" onclick="cancelBefore4Days('${v}')">4일전 취소</button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>운행 형태</label>
+                                    <select id="type_${v}">
+                                        <option value="공공예약" selected>공공예약</option>
+                                        <option value="1박">1박</option>
+                                        <option value="2박">2박</option>
+                                        <option value="성묘지원">성묘지원</option>
+                                        <option value="나들이동행">나들이동행</option>
+                                        <option value="시티투어">시티투어</option>
+                                        <option value="시티투어(야)">시티투어(야)</option>
+                                        <option value="서울운행">서울운행</option>
+                                        <option value="기타(서울)">기타(서울)</option>
+                                        <option value="기타(외곽)">기타(외곽)</option>
+                                    </select>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label>출발지</label>
+                                        <input type="text" id="start_${v}" autocomplete="off" list="start-place-list">
+                                    </div>
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label>도착지</label>
+                                        <input type="text" id="end_${v}" autocomplete="off" list="end-place-list">
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                                    <div class="form-group" style="flex: 1.5; margin-bottom: 0;">
+                                        <label>거리 (km)</label>
+                                        <input type="number" id="km_${v}" value="0">
+                                    </div>
+                                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                        <label>내용</label>
+                                        <input type="text" id="dest_${v}">
+                                    </div>
+                                </div>
+                            
+                                <div class="form-group" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #007bff; margin-top:15px;">
+                                    <label style="color: #007bff; font-weight:700;">📎 신청서 연결 (보관함에서 선택)</label>
+                                    <select id="photo_select_${v}" class="daily-photo-selector" style="width: 100%; padding: 6px; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+                                        <option value="">연결 안 함 (선택)</option>
+                                    </select>
+                                </div>
+
+                                <div style="border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 10px;">
+                                    <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:center; margin-bottom:12px; background:#e8f0fe; padding:6px 10px; border-radius:4px;">
+                                        ${isBus ? `<div class="form-group chk-group" id="single_box_${v}" style="margin-bottom:0;"><label><input type="checkbox" id="single_${v}"> 1인 배차</label></div>` : ''}
+                                        <div class="form-group chk-group" style="margin-bottom:0; color:#007bff;">
+                                            <label><input type="checkbox" id="manual_${v}" onchange="toggleManual('${v}', ${isBus})"> 수동 배차</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display:flex; gap:10px; margin-bottom:12px;">
+                                        <div class="form-group" style="flex:1; margin-bottom:0;">
+                                            <label>운전원 1</label>
+                                            <select id="driver1_${v}" disabled>
+                                                <option value="">자동 배정</option>
+                                                <option value="미지정">미지정</option>
+                                            </select>
+                                        </div>
+                                        ${isBus ? `
+                                        <div class="form-group" style="flex:1; margin-bottom:0;">
+                                            <label>운전원 2</label>
+                                            <select id="driver2_${v}" disabled>
+                                                <option value="">자동 배정</option>
+                                                <option value="미지정">미지정</option>
+                                            </select>
+                                        </div>` : ''}
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin-top:10px; border-top: 1px dashed #eee; padding-top:10px;">
+                                        <label style="color:#d9534f;">이 배차 직후, 다음 순번 지정 (선택)</label>
+                                        <select id="next_pointer_${v}">
+                                            <option value="">자동 유지 (지정 안함)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    busList.forEach(v => document.write(formTemplate(v, true)));
+                    solatiList.forEach(v => document.write(formTemplate(v, false)));
+                </script>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCipeqfmU03bZQozFt8MdToxxuDyFIUd-g",
+            authDomain: "park-fc66f.firebaseapp.com",
+            projectId: "park-fc66f",
+            storageBucket: "park-fc66f.firebasestorage.app",
+            messagingSenderId: "93011031366",
+            appId: "1:93011031366:web:72438cb8d71dd5a7902147"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage(); 
+
+        // 오프라인 캐시(임시저장) 및 멀티 탭 동기화 활성화
+        db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+            console.log("캐시 활성화 실패:", err);
+        });
+
+        const systemUsers = {
+            'admin1': { role: 'admin', pw: '123456' },
+            'admin2': { role: 'admin', pw: '123456' },
+            'admin3': { role: 'admin', pw: '123456' },
+            '박기준': { role: 'driver', pw: '123456' },
+            '변석현': { role: 'driver', pw: '123456' },
+            '이명순': { role: 'driver', pw: '123456' },
+            '김탁': { role: 'driver', pw: '123456' },
+            '한상훈': { role: 'driver', pw: '123456' },
+            '문인식': { role: 'driver', pw: '123456' },
+            '황덕일': { role: 'driver', pw: '123456' },
+            '강철규': { role: 'driver', pw: '123456' },
+            '이상헌': { role: 'driver', pw: '123456' },
+            '함동한': { role: 'driver', pw: '123456' },
+            '정한중': { role: 'driver', pw: '123456' },
+            '조병준': { role: 'driver', pw: '123456' }
+        };
+
+        const koreaHolidays = {
+            "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일", 
+            "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "기독탄신일",
+            "2026-02-16": "설날연휴", "2026-02-17": "설날", "2026-02-18": "설날연휴",
+            "2026-03-02": "대체공휴일", "2026-05-24": "부처님오신날", "2026-05-25": "대체공휴일",
+            "2026-06-03": "지방선거", "2026-08-17": "대체공휴일", "2026-09-24": "추석연휴", 
+            "2026-09-25": "추석", "2026-09-26": "추석연휴", "2026-10-05": "대체공휴일",
+            "2027-02-06": "설날연휴", "2027-02-07": "설날", "2027-02-08": "설날연휴", "2027-02-09": "대체공휴일",
+            "2027-05-01": "노동절", "2027-05-03": "대체공휴일", "2027-05-13": "부처님오신날",
+            "2027-07-17": "제헌절", "2027-07-19": "대체공휴일", "2027-08-15": "광복절",
+            "2027-08-16": "대체공휴일", "2027-09-14": "추석연휴", "2027-09-15": "추석", "2027-09-16": "추석연휴",
+            "2027-10-04": "대체공휴일", "2027-10-11": "대체공휴일", "2027-12-27": "대체공휴일"
+        };
+        
+        function getHolidayName(year, month, day) {
+            const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            return koreaHolidays[`${year}-${mmdd}`] || koreaHolidays[mmdd] || null;
+        }
+
+        const defaultDrivers = ['박기준', '변석현', '이명순', '김탁', '한상훈', '문인식', '황덕일', '강철규', '이상헌', '함동한', '정한중', '조병준'];
+        let driverListModifiers = {}; 
+        let engineModifiers = {}; 
+        
+        const _now = new Date();
+        let currentYear = _now.getFullYear(); 
+        let currentMonth = _now.getMonth(); 
+        let currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`; 
+        
+        let dailyDriverStatus = {}; 
+        let allReservations = [];
+        let dailyMemos = {}; 
+        let dailyAttachments = {};
+        let currentUser = '';
+
+        function showLoading(msg = '서버 처리 중...') {
+            document.getElementById('loading-text').innerText = msg;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const id = document.getElementById('login-id').value.trim();
+            const pw = document.getElementById('login-pw').value;
+            const btn = document.getElementById('btn-login');
+
+            if (!id) return alert('이름(또는 아이디)을 입력해주세요.');
+            if (!systemUsers[id]) {
+                alert('등록되지 않은 사용자입니다. 이름을 정확히 확인해 주세요.');
+                document.getElementById('login-id').value = ''; 
+                return;
+            }
+            if (!pw) return alert('비밀번호를 입력해주세요.');
+
+            btn.innerText = '인증 확인 중...';
+            btn.disabled = true;
+
+            let realPw = systemUsers[id].pw; 
+            try {
+                const doc = await db.collection('user_auth').doc(id).get();
+                if (doc.exists && doc.data().pw) { realPw = doc.data().pw; }
+            } catch (error) { console.error("인증 통신 오류", error); }
+
+            btn.innerText = '접속하기';
+            btn.disabled = false;
+
+            if (pw !== realPw) {
+                alert('비밀번호가 틀렸습니다.');
+                document.getElementById('login-pw').value = ''; 
+                return;
+            }
+
+            localStorage.setItem('loggedInUser', id);
+            localStorage.setItem('userRole', 'admin'); // 통합 창에서 모든 기능을 사용할 수 있도록 관리자 권한 부여
+            localStorage.setItem('loggedInPw', realPw); 
+            window.location.reload(); 
+        }
+
+        function logout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+        }
+
+        function openPwModal() {
+            document.getElementById('current-pw').value = '';
+            document.getElementById('new-pw').value = '';
+            document.getElementById('new-pw-confirm').value = '';
+            document.getElementById('pw-modal-overlay').style.display = 'flex';
+        }
+        
+        function closePwModal() {
+            document.getElementById('pw-modal-overlay').style.display = 'none';
+        }
+
+        async function changePassword() {
+            const curPw = document.getElementById('current-pw').value;
+            const newPw = document.getElementById('new-pw').value;
+            const confirmPw = document.getElementById('new-pw-confirm').value;
+            const savedPw = localStorage.getItem('loggedInPw');
+
+            if(curPw !== savedPw) return alert('현재 비밀번호가 틀렸습니다.');
+            if(newPw.length < 4) return alert('새 비밀번호는 4자리 이상 입력해주세요.');
+            if(newPw !== confirmPw) return alert('새 비밀번호가 일치하지 않습니다.');
+
+            showLoading('비밀번호 변경 중...');
+            try {
+                await db.collection('user_auth').doc(currentUser).set({ pw: newPw }, { merge: true });
+                localStorage.setItem('loggedInPw', newPw); 
+                alert('비밀번호가 성공적으로 변경되었습니다!');
+                closePwModal();
+            } catch(e) {
+                alert('변경 실패. 다시 시도해주세요.');
+            }
+            hideLoading();
+        }
+
+        function getShortType(type) {
+            if (!type) return '기타';
+            if (type.includes('공공')) return '공공';
+            if (type.includes('1박')) return '1박';
+            if (type.includes('2박')) return '2박';
+            if (type === '서울운행' || type === '서울') return '서울'; 
+            if (type.includes('시티투어(야)') || type.includes('시티(야)')) return '시티(야)';
+            if (type.includes('시티')) return '시티';
+            if (type.includes('성묘')) return '성묘';
+            if (type.includes('나들이')) return '나들이'; 
+            return '기타';
+        }
+
+        function getDispName(name) {
+            if (!name) return '';
+            if (name.includes('admin')) return name;
+            if (name.length >= 2) return name.substring(1);
+            return name;
+        }
+
+        function getEffectiveDriverList(date) {
+            const modDates = Object.keys(driverListModifiers).sort();
+            let effectiveList = [...defaultDrivers];
+            for (const modDate of modDates) {
+                if (modDate <= date) effectiveList = [...driverListModifiers[modDate]];
+            }
+            return effectiveList;
+        }
+
+        function getEffectiveEngine(date) {
+            const modDates = Object.keys(engineModifiers).sort();
+            let isB = false; 
+            for (const modDate of modDates) {
+                if (modDate <= date) isB = engineModifiers[modDate];
+            }
+            return isB;
+        }
+
+        function updateDropdownOptions(date) {
+            const activeDrivers = getEffectiveDriverList(date);
+            const reserveDrivers = defaultDrivers.filter(d => !activeDrivers.includes(d));
+
+            let optionsHtml = `<optgroup label="[현재 순번 멤버]">`;
+            optionsHtml += activeDrivers.map(d => `<option value="${d}">${d}</option>`).join('');
+            optionsHtml += `</optgroup>`;
+
+            if (reserveDrivers.length > 0) {
+                optionsHtml += `<optgroup label="[예비 / 제외 멤버]">`;
+                optionsHtml += reserveDrivers.map(d => `<option value="${d}">${d}</option>`).join('');
+                optionsHtml += `</optgroup>`;
+            }
+            
+            const allVehicles = ['1호차', '2호차', '3호차', '예비버스', '11호차', '12호차', '13호차', '14호차', '3818'];
+            allVehicles.forEach(v => {
+                const d1 = document.getElementById(`driver1_${v}`);
+                const d2 = document.getElementById(`driver2_${v}`);
+                const np = document.getElementById(`next_pointer_${v}`);
+                
+                if (d1) {
+                    const old1 = d1.value;
+                    d1.innerHTML = `<option value="">자동 배정</option><option value="미지정">미지정</option>` + optionsHtml;
+                    if (defaultDrivers.includes(old1) || old1 === '미지정' || old1 === '') d1.value = old1;
+                    else d1.value = '';
+                }
+                if (d2) {
+                    const old2 = d2.value;
+                    d2.innerHTML = `<option value="">자동 배정</option><option value="미지정">미지정</option>` + optionsHtml;
+                    if (defaultDrivers.includes(old2) || old2 === '미지정' || old2 === '') d2.value = old2;
+                    else d2.value = '';
+                }
+                if (np) {
+                    const oldNp = np.value;
+                    np.innerHTML = `<option value="">자동 유지 (지정 안함)</option>` + optionsHtml;
+                    if (defaultDrivers.includes(oldNp) || oldNp === '') np.value = oldNp;
+                    else np.value = '';
+                }
+            });
+        }
+
+        async function cleanUpOldFiles(reservations) {
+            const limitDate = new Date(_now);
+            limitDate.setDate(limitDate.getDate() - 2);
+            const limitStr = `${limitDate.getFullYear()}-${String(limitDate.getMonth() + 1).padStart(2, '0')}-${String(limitDate.getDate()).padStart(2, '0')}`;
+            
+            for (let r of reservations) {
+                if (r.startDate < limitStr && r.photoUrl) {
+                    try {
+                        const fileRef = storage.refFromURL(r.photoUrl);
+                        await fileRef.delete();
+                    } catch (err) {}
+                    r.photoUrl = null; 
+                    db.collection('reservations').doc(r.id).set(r, { merge: true }).catch(e => {});
+                }
+            }
+
+            try {
+                const snapshot = await db.collection('daily_attachments').get();
+                snapshot.forEach(async (doc) => {
+                    const docDate = doc.id;
+                    if (docDate < limitStr) {
+                        const data = doc.data();
+                        const files = data.files || [];
+                        for (let f of files) {
+                            try {
+                                const fileRef = storage.refFromURL(f.url);
+                                await fileRef.delete();
+                            } catch (err) {}
+                        }
+                        await db.collection('daily_attachments').doc(docDate).delete();
+                    }
+                });
+            } catch (error) {
+                console.error("보관함 자동 삭제 실패:", error);
+            }
+        }
+
+        async function handleMemo() {
+            if (!currentDate) return;
+            const currentMemo = dailyMemos[currentDate] || '';
+            const newMemo = prompt(`[${currentDate}] 기사님들께 전달할 공지/메모를 입력하세요.\n(※ 내용을 모두 지우고 확인을 누르면 삭제됩니다.)`, currentMemo);
+            
+            if (newMemo === null) return;
+            
+            showLoading('메모 저장 중...');
+            try {
+                if (newMemo.trim() === '') {
+                    await db.collection('daily_memos').doc(currentDate).delete();
+                } else {
+                    await db.collection('daily_memos').doc(currentDate).set({ text: newMemo.trim() });
+                }
+            } catch (e) { alert('메모 저장 실패'); }
+            hideLoading();
+        }
+
+        let unsubRes = null; let unsubStatus = null; let unsubMod = null; let unsubMemo = null; let unsubAttach = null;
+        let isInitialLoad = true;
+        let loadedStartStr = '';
+        let loadedEndStr = '';
+
+        function loadFromFirebase() {
+            showLoading('데이터 최적화 로딩 중...');
+            
+            if (!loadedStartStr || !loadedEndStr) {
+                const startDate = new Date(currentYear, currentMonth - 1, 1);
+                const endDate = new Date(currentYear, currentMonth + 2, 0); 
+                
+                loadedStartStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+                loadedEndStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+            }
+
+            if (unsubRes) unsubRes();
+
+            unsubRes = db.collection('reservations')
+                         .where("startDate", ">=", loadedStartStr)
+                         .where("startDate", "<=", loadedEndStr)
+                         .onSnapshot(async snapshot => {
+                allReservations = [];
+                const startSet = new Set(), endSet = new Set();
+
+                snapshot.forEach(doc => { 
+                    const d = doc.data(); d.id = doc.id; 
+                    allReservations.push(d); 
+
+                    if (d.start && d.start.trim() !== '미상' && d.start.trim() !== '미입력') startSet.add(d.start.trim());
+                    if (d.end && d.end.trim() !== '미상' && d.end.trim() !== '미입력') endSet.add(d.end.trim());
+                });
+
+                const startList = document.getElementById('start-place-list');
+                const endList = document.getElementById('end-place-list');
+                if (startList) startList.innerHTML = [...startSet].map(val => `<option value="${val}">`).join('');
+                if (endList) endList.innerHTML = [...endSet].map(val => `<option value="${val}">`).join('');
+
+                if (typeof cleanUpOldFiles === 'function') await cleanUpOldFiles(allReservations);
+
+                recalculateAll(false); 
+                hideLoading();
+
+                if (isInitialLoad && currentDate) {
+                    isInitialLoad = false;
+                    selectDate(currentDate);
+                } else {
+                    renderCalendar();
+                    renderMonthlySummary();
+                    if (currentDate) {
+                        renderDispatchResult(currentDate);
+                        renderStatusPanel(currentDate);
+                    }
+                }
+            }, error => {
+                console.warn("예약 데이터 수신 실패:", error);
+                hideLoading();
+            });
+
+            if (!unsubStatus) {
+                unsubStatus = db.collection('daily_status').onSnapshot(snapshot => {
+                    dailyDriverStatus = {};
+                    snapshot.forEach(doc => { dailyDriverStatus[doc.id] = doc.data(); });
+                    recalculateAll(false); 
+                    renderCalendar();
+                    renderMonthlySummary();
+                    if (currentDate) {
+                        renderDispatchResult(currentDate);
+                        renderStatusPanel(currentDate);
+                    }
+                });
+            }
+
+            if (!unsubMod) {
+                unsubMod = db.collection('driver_modifiers').onSnapshot(snapshot => {
+                    driverListModifiers = {};
+                    engineModifiers = {}; 
+                    snapshot.forEach(doc => { 
+                        driverListModifiers[doc.id] = doc.data().list; 
+                        engineModifiers[doc.id] = doc.data().useEngineB || false;
+                    });
+                    recalculateAll(false); 
+                    renderCalendar();
+                    renderMonthlySummary();
+                    if (currentDate) {
+                        renderDispatchResult(currentDate);
+                        renderStatusPanel(currentDate);
+                        updateDropdownOptions(currentDate);
+                    }
+                });
+            }
+
+            if (!unsubMemo) {
+                unsubMemo = db.collection('daily_memos').onSnapshot(snapshot => {
+                    dailyMemos = {};
+                    snapshot.forEach(doc => { dailyMemos[doc.id] = doc.data().text; });
+                    renderCalendar(); 
+                    if (currentDate) renderDispatchResult(currentDate); 
+                });
+            }
+
+            if (!unsubAttach) {
+                unsubAttach = db.collection('daily_attachments').onSnapshot(snapshot => {
+                    dailyAttachments = {};
+                    snapshot.forEach(doc => { dailyAttachments[doc.id] = doc.data().files || []; });
+                    if (currentDate) renderDispatchResult(currentDate); 
+                });
+            }
+        }
+
+        let tempEditList = [];
+        function openDriverEditModal() {
+            tempEditList = [...getEffectiveDriverList(currentDate)];
+            document.getElementById('modal-date-text').innerText = `※ 이 명단과 엔진 설정은 [${currentDate}] 이후부터 영구 적용되며, 이전 날짜는 절대 변경되지 않습니다.`;
+            document.getElementById('use-b-engine').checked = getEffectiveEngine(currentDate);
+            renderDriverEditList();
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+        
+        function closeDriverModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('new-driver-name').value = '';
+        }
+        
+        function renderDriverEditList() {
+            const ul = document.getElementById('edit-list-ul');
+            ul.innerHTML = '';
+            tempEditList.forEach((d, idx) => {
+                ul.innerHTML += `
+                    <li>
+                        <span>${idx + 1}. ${d}</span>
+                        <div>
+                            <button class="btn-up" onclick="moveDriver(${idx}, -1)">▲</button>
+                            <button class="btn-up" onclick="moveDriver(${idx}, 1)">▼</button>
+                            <button class="btn-del" onclick="removeDriver(${idx})">삭제</button>
+                        </div>
+                    </li>`;
+            });
+        }
+        
+        function moveDriver(idx, dir) {
+            if(idx + dir < 0 || idx + dir >= tempEditList.length) return;
+            const temp = tempEditList[idx]; tempEditList[idx] = tempEditList[idx+dir]; tempEditList[idx+dir] = temp;
+            renderDriverEditList();
+        }
+        
+        function removeDriver(idx) { tempEditList.splice(idx, 1); renderDriverEditList(); }
+        
+        function addDriverToList() {
+            const name = document.getElementById('new-driver-name').value.trim();
+            if(name && !tempEditList.includes(name)) { tempEditList.push(name); document.getElementById('new-driver-name').value = ''; renderDriverEditList(); }
+        }
+
+        function saveDriverList() {
+            if(tempEditList.length === 0) return alert("최소 1명의 운전원이 필요합니다.");
+            const isEngineB = document.getElementById('use-b-engine').checked;
+            
+            driverListModifiers[currentDate] = [...tempEditList];
+            engineModifiers[currentDate] = isEngineB;
+            
+            db.collection('driver_modifiers').doc(currentDate).set({ 
+                list: driverListModifiers[currentDate],
+                useEngineB: isEngineB
+            }).catch(e=>{});
+            
+            closeDriverModal(); 
+            recalculateAll(true); 
+            updateDropdownOptions(currentDate); 
+        }
+
+        function toggleManual(vehicleName, isBus) {
+            const isManual = document.getElementById(`manual_${vehicleName}`).checked;
+            const d1 = document.getElementById(`driver1_${vehicleName}`);
+            const d2 = document.getElementById(`driver2_${vehicleName}`);
+            
+            d1.disabled = !isManual;
+            if(d2) d2.disabled = !isManual;
+            
+            if (isBus) {
+                document.getElementById(`single_box_${vehicleName}`).style.display = isManual ? 'none' : 'block';
+            }
+        }
+
+        function toggleVehicleForm(vehicleName, checkbox, isBus) {
+            document.getElementById(`form_${vehicleName}`).style.display = checkbox.checked ? "block" : "none";
+            if (checkbox.checked) {
+                const existing = allReservations.find(r => r.vehicle === vehicleName && r.dates.includes(currentDate));
+                const d1 = document.getElementById(`driver1_${vehicleName}`);
+                const d2 = document.getElementById(`driver2_${vehicleName}`);
+                const photoSelect = document.getElementById(`photo_select_${vehicleName}`);
+                
+                if (existing) {
+                    document.getElementById(`dest_${vehicleName}`).value = existing.dest || '';
+                    document.getElementById(`type_${vehicleName}`).value = existing.type || '공공예약';
+                    document.getElementById(`km_${vehicleName}`).value = existing.km || 0;
+                    
+                    document.getElementById(`start_${vehicleName}`).value = (existing.start === '미상' || existing.start === '미입력') ? '' : (existing.start || '');
+                    document.getElementById(`end_${vehicleName}`).value = (existing.end === '미상' || existing.end === '미입력') ? '' : (existing.end || '');
+
+                    if(isBus) document.getElementById(`single_${vehicleName}`).checked = (existing.reqCount === 1);
+                    
+                    document.getElementById(`manual_${vehicleName}`).checked = existing.isManual || false;
+                    document.getElementById(`next_pointer_${vehicleName}`).value = existing.nextPointerDriver || '';
+                    if (photoSelect) photoSelect.value = existing.photoUrl || '';
+
+                    d1.value = existing.manualDrivers?.[0] || existing.assigned?.[0] || '';
+                    if (isBus && d2) d2.value = existing.manualDrivers?.[1] || existing.assigned?.[1] || '';
+
+                    if (existing.isManual) {
+                        d1.disabled = false;
+                        if(d2) d2.disabled = false;
+                        if(isBus) document.getElementById(`single_box_${vehicleName}`).style.display = 'none';
+                    } else {
+                        d1.disabled = true;
+                        if(d2) d2.disabled = true;
+                        if(isBus) {
+                            document.getElementById(`single_box_${vehicleName}`).style.display = 'block';
+                            document.getElementById(`single_${vehicleName}`).checked = (existing.reqCount === 1);
+                        }
+                    }
+                } else {
+                    document.getElementById(`dest_${vehicleName}`).value = '';
+                    document.getElementById(`type_${vehicleName}`).value = '공공예약';
+                    document.getElementById(`km_${vehicleName}`).value = '0';
+                    document.getElementById(`start_${vehicleName}`).value = '';
+                    document.getElementById(`end_${vehicleName}`).value = '';
+
+                    if(isBus) document.getElementById(`single_${vehicleName}`).checked = false;
+                    
+                    document.getElementById(`manual_${vehicleName}`).checked = false;
+                    document.getElementById(`next_pointer_${vehicleName}`).value = '';
+                    if (photoSelect) photoSelect.value = '';
+
+                    d1.value = ''; d1.disabled = true;
+                    if(isBus && d2) { d2.value = ''; d2.disabled = true; }
+                    
+                    if(isBus) {
+                        document.getElementById(`single_box_${vehicleName}`).style.display = 'block';
+                        document.getElementById(`single_${vehicleName}`).checked = false;
+                    }
+                }
+            }
+        }
+
+        function closeAllForms() {
+            const allVehicles = ['1호차', '2호차', '3호차', '예비버스', '11호차', '12호차', '13호차', '14호차', '3818'];
+            allVehicles.forEach(v => {
+                const chk = document.getElementById(`v_${v}`);
+                const form = document.getElementById(`form_${v}`);
+                if(chk) chk.checked = false;
+                if(form) form.style.display = "none";
+            });
+        }
+
+        function getDriverStatus(date, driver) {
+            if (!dailyDriverStatus[date]) return '출근'; 
+            return dailyDriverStatus[date][driver] || '출근';
+        }
+
+        function handleStatusChange(driver, newStatus, oldStatus) {
+            if (newStatus === '휴무') {
+                if (!confirm(`${driver} 운전원 휴무 사용하시겠습니까?`)) { renderStatusPanel(currentDate); return; }
+            }
+            if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
+            dailyDriverStatus[currentDate][driver] = newStatus;
+            
+            recalculateAll(true); 
+            renderStatusPanel(currentDate);
+            db.collection('daily_status').doc(currentDate).set(dailyDriverStatus[currentDate]).catch(e=>{});
+        }
+
+        function recalculateAll(shouldSaveToDB = true) {
+            const originalStateString = JSON.stringify(allReservations);
+            allReservations.forEach(r => r.assigned = []);
+            
+            allReservations.sort((a, b) => {
+                if (a.startDate !== b.startDate) return new Date(a.startDate) - new Date(b.startDate);
+                
+                const engineB = getEffectiveEngine(a.startDate);
+
+                if (engineB) {
+                    const getBTypeWeight = (t) => {
+                        if (t.includes('공공') || t.includes('1박') || t.includes('2박') || t.includes('서울')) return 1; 
+                        if (t.includes('성묘')) return 2;
+                        if (t.includes('시티')) return 3;
+                        return 4;
+                    };
+                    const wA = getBTypeWeight(a.type);
+                    const wB = getBTypeWeight(b.type);
+                    if (wA !== wB) return wA - wB; 
+
+                    const getBVehWeight = (v) => {
+                        if (v === '1호차') return 1; if (v === '2호차') return 2; if (v === '3호차') return 3; if (v === '예비버스') return 4;
+                        if (v === '11호차') return 5; if (v === '12호차') return 6; if (v === '13호차') return 7; if (v === '14호차') return 8; if (v === '3818') return 9; return 99;
+                    };
+                    const vA = getBVehWeight(a.vehicle);
+                    const vB = getBVehWeight(b.vehicle);
+                    if (vA !== vB) return vA - vB;
+                    
+                    if (a.km !== b.km) return a.km - b.km;
+                    return 0;
+
+                } else {
+                    const isBusA = ['1호차', '2호차', '3호차', '예비버스'].includes(a.vehicle);
+                    const isBusB = ['1호차', '2호차', '3호차', '예비버스'].includes(b.vehicle);
+                    if (isBusA !== isBusB) return isBusA ? -1 : 1; 
+
+                    const getTypeWeight = (t, isBus) => {
+                        if (isBus) {
+                            if (t.includes('공공') || t.includes('서울')) return 1; 
+                            if (t.includes('1박')) return 2; if (t.includes('2박')) return 3;
+                            if (t.includes('성묘')) return 4; if (t.includes('나들이')) return 5;
+                            if (t.includes('시티')) return 6; return 99;
+                        } else { 
+                            if (t.includes('공공') || t.includes('서울') || t.includes('성묘')) return 1; 
+                            if (t.includes('1박')) return 2; if (t.includes('2박')) return 3;
+                            if (t.includes('나들이')) return 4; if (t.includes('시티')) return 5; return 99;
+                        }
+                    };
+                    const wA = getTypeWeight(a.type, isBusA);
+                    const wB = getTypeWeight(b.type, isBusB);
+                    if (wA !== wB) return wA - wB; 
+
+                    if (a.km !== b.km) return a.km - b.km;
+
+                    const vehWeight = (v) => {
+                        if (v === '3호차') return 1; if (v === '1호차') return 2; if (v === '2호차') return 3; if (v === '예비버스') return 4;
+                        if (v === '11호차') return 5; if (v === '12호차') return 6; if (v === '13호차') return 7; if (v === '14호차') return 8; if (v === '3818') return 9; return 99;
+                    };
+                    return vehWeight(a.vehicle) - vehWeight(b.vehicle); 
+                }
+            });
+
+            let pointer = 0; let lastProcessedDate = null; let currentList = [...defaultDrivers];
+
+            allReservations.forEach(res => {
+                if (res.startDate !== lastProcessedDate) {
+                    lastProcessedDate = res.startDate;
+                    currentList = getEffectiveDriverList(res.startDate);
+                    if (currentList.length > 0) pointer = pointer % currentList.length; 
+                }
+
+                if (res.isManual && res.manualDrivers && res.manualDrivers.length > 0) {
+                    res.assigned = [...res.manualDrivers];
+                } else {
+                    let loopGuard = 0;
+                    while (res.assigned.length < res.reqCount && loopGuard < 50 && currentList.length > 0) {
+                        const candidate = currentList[pointer];
+                        let isWorkingAllDays = true;
+                        
+                        for (let d of res.dates) {
+                            if (getDriverStatus(d, candidate) === '휴무') { isWorkingAllDays = false; break; }
+                        }
+
+                        let isOverlapping = false;
+                        for (let other of allReservations) {
+                            if (other.id !== res.id && other.assigned.includes(candidate)) {
+                                if (res.dates.some(d => other.dates.includes(d))) { isOverlapping = true; break; }
+                            }
+                        }
+
+                        if (isWorkingAllDays && !isOverlapping) res.assigned.push(candidate);
+                        pointer = (pointer + 1) % currentList.length;
+                        loopGuard++;
+                    }
+                }
+
+                if (res.nextPointerDriver && currentList.includes(res.nextPointerDriver)) {
+                    pointer = currentList.indexOf(res.nextPointerDriver);
+                }
+            });
+
+            if (shouldSaveToDB) {
+                const oldReservations = JSON.parse(originalStateString);
+                allReservations.forEach(res => {
+                    const oldRes = oldReservations.find(o => o.id === res.id);
+                    if (!oldRes || JSON.stringify(oldRes) !== JSON.stringify(res)) {
+                        db.collection('reservations').doc(res.id).set(res).catch(e=>{});
+                    }
+                });
+            }
+
+            renderCalendar();
+            renderStatusPanel(currentDate);
+            renderDispatchResult(currentDate);
+            renderMonthlySummary();
+        }
+
+        function getDatesForTrip(startDate, type) {
+            let days = 1; if (type.includes('1박')) days = 2; if (type.includes('2박')) days = 3;
+            const dates = []; let cur = new Date(startDate);
+            for(let i = 0; i < days; i++) {
+                dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`);
+                cur.setDate(cur.getDate() + 1);
+            }
+            return dates;
+        }
+
+        async function makeReservation(vehicleName, isBus) {
+            const type = document.getElementById(`type_${vehicleName}`).value;
+            const dates = getDatesForTrip(currentDate, type);
+            let isManual = document.getElementById(`manual_${vehicleName}`).checked;
+
+            let manualDrivers = [];
+            let reqCount = 1;
+
+            if (isManual) {
+                let d1 = document.getElementById(`driver1_${vehicleName}`).value;
+                if (d1) manualDrivers.push(d1);
+                if (isBus && document.getElementById(`driver2_${vehicleName}`)) {
+                    let d2 = document.getElementById(`driver2_${vehicleName}`).value;
+                    if (d2) manualDrivers.push(d2);
+                }
+                reqCount = manualDrivers.length || 1;
+            } else {
+                reqCount = isBus ? (document.getElementById(`single_${vehicleName}`).checked ? 1 : 2) : 1; 
+            }
+
+            let nextPointerDriver = document.getElementById(`next_pointer_${vehicleName}`).value;
+
+            const existingIndex = allReservations.findIndex(r => r.vehicle === vehicleName && r.dates.includes(currentDate));
+            let docId = Date.now().toString(); 
+            let photoUrl = null;
+            let settlement = {}; 
+
+            if (existingIndex !== -1) {
+                let existing = allReservations[existingIndex];
+                docId = existing.id; 
+                photoUrl = existing.photoUrl || null; 
+                settlement = existing.settlement || {};
+                allReservations.splice(existingIndex, 1);
+            }
+
+            const photoSelect = document.getElementById(`photo_select_${vehicleName}`);
+            if (photoSelect && photoSelect.value) {
+                photoUrl = photoSelect.value;
+            }
+
+            showLoading('예약 등록 중...');
+
+            allReservations.push({
+                id: docId, startDate: currentDate, dates: dates, vehicle: vehicleName,
+                start: document.getElementById(`start_${vehicleName}`).value || '', 
+                end: document.getElementById(`end_${vehicleName}`).value || '', 
+                dest: document.getElementById(`dest_${vehicleName}`).value || '내용 없음',
+                type: type, km: parseInt(document.getElementById(`km_${vehicleName}`).value) || 0,
+                reqCount: reqCount, assigned: [],
+                isCanceled: false,
+                isManual: isManual,
+                manualDrivers: manualDrivers,
+                nextPointerDriver: nextPointerDriver,
+                photoUrl: photoUrl,
+                settlement: settlement
+            });
+
+            document.getElementById(`v_${vehicleName}`).checked = false;
+            document.getElementById(`form_${vehicleName}`).style.display = "none";
+            recalculateAll(true); 
+            hideLoading();
+        }
+
+        function cancelReservation(vehicleName) {
+            const index = allReservations.findIndex(r => r.vehicle === vehicleName && r.dates.includes(currentDate));
+            if (index !== -1) {
+                db.collection('reservations').doc(allReservations[index].id).delete().catch(e => {});
+                allReservations.splice(index, 1);
+                recalculateAll(true); 
+                alert(`[${vehicleName}] 배차가 완전 취소(삭제) 처리되었습니다.`);
+            } else {
+                alert("이 날짜에 등록된 배차 내역이 없습니다.");
+            }
+            document.getElementById(`v_${vehicleName}`).checked = false;
+            document.getElementById(`form_${vehicleName}`).style.display = "none";
+        }
+
+        function cancelBefore4Days(vehicleName) {
+            const index = allReservations.findIndex(r => r.vehicle === vehicleName && r.dates.includes(currentDate));
+            if (index !== -1) {
+                allReservations[index].isCanceled = true;
+                db.collection('reservations').doc(allReservations[index].id).set(allReservations[index]).catch(e=>{});
+                recalculateAll(true); 
+                alert(`[${vehicleName}] 4일 전 취소 처리되었습니다.`);
+            } else {
+                alert("이 날짜에 등록된 배차 내역이 없습니다.");
+            }
+            document.getElementById(`v_${vehicleName}`).checked = false;
+            document.getElementById(`form_${vehicleName}`).style.display = "none";
+        }
+
+        function changeMonth(offset) {
+            currentMonth += offset;
+            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+
+            const viewStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const viewEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+            if (viewStart < loadedStartStr) {
+                loadedStartStr = viewStart;
+                loadFromFirebase();
+            } else if (viewEnd > loadedEndStr) {
+                loadedEndStr = viewEnd;
+                loadFromFirebase();
+            } else {
+                renderCalendar();
+                renderMonthlySummary();
+            }
+        }
+
+        function renderCalendar() {
+            const shortYear = currentYear.toString().slice(-2);
+            document.getElementById('month-display').innerText = `${shortYear}년 ${currentMonth + 1}월`;
+            
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = `<div class="calendar-day-header sun">일</div><div class="calendar-day-header">월</div><div class="calendar-day-header">화</div><div class="calendar-day-header">수</div><div class="calendar-day-header">목</div><div class="calendar-day-header">금</div><div class="calendar-day-header sat">토</div>`;
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-cell" style="background:#f4f6f9; cursor:default;"></div>`;
+
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayOfWeek = (firstDay + d - 1) % 7;
+                const holidayName = getHolidayName(currentYear, currentMonth + 1, d);
+                let extraClass = (dayOfWeek === 0) ? 'sun ' : (dayOfWeek === 6) ? 'sat ' : '';
+                let extraHTML = '';
+
+                if (holidayName) { extraClass += 'holiday '; extraHTML = `<span class="holiday-name">${holidayName}</span>`; }
+                if (dateStr === currentDate) extraClass += 'selected ';
+
+                grid.innerHTML += `
+                    <div class="calendar-cell ${extraClass}" data-date="${dateStr}" onclick="selectDate('${dateStr}')">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <span class="date-num">${d}</span>${extraHTML}
+                        </div>
+                        <div class="tag-container" id="tags_${dateStr}"></div>
+                        <div id="cell_status_${dateStr}" style="margin-top:auto; padding-top:4px; border-top:1px dashed #eee; display:none; flex-direction:column; gap:2px;"></div>
+                    </div>`;
+            }
+            for (let d = 1; d <= lastDate; d++) updateCalendarCellUI(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+        }
+
+        function updateCalendarCellUI(date) {
+            const tagsContainer = document.getElementById(`tags_${date}`);
+            const statusContainer = document.getElementById(`cell_status_${date}`);
+            if (!tagsContainer || !statusContainer) return;
+
+            const activeReservations = allReservations.filter(r => (r.dates || []).includes(date));
+            
+            let tagsHTML = '';
+
+            if (typeof dailyMemos !== 'undefined' && dailyMemos[date]) {
+                tagsHTML += `
+                    <div class="event-box" style="background-color: #fce4ec; border: 1px solid #f8bbd0; width: 100%; max-width: 100%; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 4px; margin-bottom: 3px; border-radius: 4px;" title="${dailyMemos[date]}">
+                        <span class="badge" style="background-color: transparent; color: #dc3545; border: 1px solid #dc3545;">메모</span>
+                        <span style="color: #d81b60; font-weight: 800; margin-left: 4px;">${dailyMemos[date]}</span>
+                    </div>`;
+            }
+
+            activeReservations.forEach(d => {
+                let shortTypeStr = getShortType(d.type);
+                let boxClass = 'default'; let badgeClass = 'default';
+
+                if (shortTypeStr === '공공') { boxClass = 'pub'; badgeClass = 'pub'; }
+                else if (shortTypeStr === '성묘') { boxClass = 'grave'; badgeClass = 'grave'; }
+                else if (shortTypeStr === '1박') { boxClass = 'night1'; badgeClass = 'night1'; }
+                else if (shortTypeStr === '2박') { boxClass = 'night2'; badgeClass = 'night2'; }
+                else if (shortTypeStr === '서울') { boxClass = 'seoul'; badgeClass = 'seoul'; }
+                else if (shortTypeStr === '시티' || shortTypeStr === '시티(야)') { boxClass = 'citytour'; badgeClass = 'citytour'; }
+                else if (shortTypeStr === '기타') { boxClass = 'default'; badgeClass = 'default'; }
+
+                if (d.isManual) badgeClass = 'manual-badge';
+
+                let canceledBoxStyle = d.isCanceled ? 'background-color: transparent; border: 1px dashed #adb5bd; color: #adb5bd; text-decoration: line-through;' : '';
+                let canceledBadgeStyle = d.isCanceled ? 'background-color: transparent; color: #adb5bd; border: 1px solid #adb5bd;' : '';
+                
+                let assignedNamesHTML = (d.assigned || []).map(name => {
+                    let isUnderline = (d.settlement && d.settlement[name] && d.settlement[name][date] && d.settlement[name][date].isEarly) || false;
+                    let dispName = name;
+                    if (name === currentUser && !d.isCanceled) {
+                        dispName = `<span style="color:#0056b3; font-weight:900;">${dispName}</span>`;
+                    }
+                    return (isUnderline && !d.isCanceled && name !== '미지정') ? `<span class="early-underline">${dispName}</span>` : dispName;
+                }).join(', ');
+
+                let attachIcon = d.photoUrl ? ' <span style="font-size:0.8rem;">📎</span>' : '';
+
+                tagsHTML += `
+                    <div class="event-box ${boxClass}" style="${canceledBoxStyle}; cursor:pointer;" onclick="showDispatchDetail(event, '${d.id}', '${date}')">
+                        <span class="badge ${badgeClass}" style="${canceledBadgeStyle}">${shortTypeStr}</span> 
+                        ${d.vehicle}: ${assignedNamesHTML}${attachIcon}
+                    </div>`;
+            });
+
+            tagsContainer.innerHTML = tagsHTML;
+
+            const statusData = dailyDriverStatus[date] || {};
+            const offDrivers = Object.keys(statusData).filter(d => statusData[d] === '휴무');
+            const dutyDrivers = Object.keys(statusData).filter(d => statusData[d] === '당직');
+
+            let statusHTML = '';
+            if (dutyDrivers.length > 0) {
+                statusHTML += `<div class="cal-status duty"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
+            }
+            
+            if (offDrivers.length > 0) {
+                let offNames = offDrivers.map(n => getDispName(n)).join(', ');
+                statusHTML += `<div class="cal-status off"><span style="color:#d9534f; font-weight:700;">휴무: </span><span class="names" style="color:#007bff; font-weight:700;">${offNames}</span></div>`;
+            }
+            
+            if (statusHTML !== '') {
+                statusContainer.style.display = 'flex';
+                statusContainer.innerHTML = statusHTML;
+            } else {
+                statusContainer.style.display = 'none';
+                statusContainer.innerHTML = '';
+            }
+        }
+
+        function showDispatchDetail(event, id, clickedDate) {
+            event.stopPropagation(); 
+            const d = allReservations.find(r => r.id === id);
+            if (!d) return;
+
+            let assigned = (d.assigned && d.assigned.length > 0) ? d.assigned.join(', ') : '미정';
+            let dispVehicle = (d.vehicle === '3818') ? '3818(스타리아)' : d.vehicle;
+
+            document.getElementById('detail-modal-title').innerText = `[${dispVehicle}] ${d.type} (${clickedDate})`;
+            document.getElementById('detail-modal-drivers').innerText = assigned;
+            
+            let routeText = `[${d.start || '미입력'} ➔ ${d.end || '미입력'}]<br>${d.dest || '내용 없음'}`;
+            document.getElementById('detail-modal-dest').innerHTML = routeText; 
+
+            // 로그인한 아이디(currentUser) 기준 정산 입력창 세팅
+            document.getElementById('settle-user-title').innerText = `👤 ${currentUser}님 운행 시간(정산) 입력`;
+            document.getElementById('settle-res-id').value = id;
+            document.getElementById('settle-date').value = clickedDate;
+
+            const mySettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][clickedDate]) ? d.settlement[currentUser][clickedDate] : {};
+            document.getElementById('settle-early').checked = mySettle.isEarly || false;
+            document.getElementById('settle-in').value = mySettle.clockIn || '';
+            document.getElementById('settle-out').value = mySettle.clockOut || '';
+
+            const imgContainer = document.getElementById('detail-modal-img-container');
+            
+            const limitDate = new Date();
+            limitDate.setDate(limitDate.getDate() - 2);
+            const limitStr = `${limitDate.getFullYear()}-${String(limitDate.getMonth() + 1).padStart(2, '0')}-${String(limitDate.getDate()).padStart(2, '0')}`;
+            
+            if (d.startDate < limitStr && !d.photoUrl) {
+                imgContainer.innerHTML = `<p style="color:#d9534f; font-size:0.9rem; font-weight:bold; background:#fff3cd; padding:10px; border-radius:6px;">🛡️ 보안 및 용량 관리를 위해 자동 파기된 문서입니다.</p>`;
+                imgContainer.style.display = 'block';
+            } else if (d.photoUrl) {
+                const isImg = d.photoUrl.match(/\.(jpeg|jpg|png|gif|webp)(?:\?|$)/i);
+                if (isImg) {
+                    imgContainer.innerHTML = `
+                        <a href="${d.photoUrl}" target="_blank" style="display:block; text-decoration:none;">
+                            <img src="${d.photoUrl}" style="width: 100%; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        </a>
+                        <p style="font-size:0.75rem; color:#888; margin-top:8px;">👆 사진을 누르면 원본 크기로 확대해서 볼 수 있습니다.</p>
+                    `;
+                } else {
+                    imgContainer.innerHTML = `<a href="${d.photoUrl}" target="_blank" style="display:inline-block; padding:12px 20px; background:#007bff; color:#fff; border-radius:6px; font-weight:bold; text-decoration:none;">📄 첨부된 문서 열기 / 다운로드</a>`;
+                }
+                imgContainer.style.display = 'block';
+            } else {
+                imgContainer.innerHTML = '<p style="color:#888; font-size:0.9rem;">첨부된 파일이 없습니다.</p>';
+                imgContainer.style.display = 'block';
+            }
+
+            document.getElementById('detail-modal-overlay').style.display = 'flex';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal-overlay').style.display = 'none';
+        }
+
+        function calculateSettlement(dateStr, clockInStr, clockOutStr, type) {
+            if (!clockInStr || !clockOutStr) return { overtime: 0, allowance: 0 };
+            
+            let inT = parseFloat(clockInStr);
+            let outT = parseFloat(clockOutStr);
+            if (isNaN(inT) || isNaN(outT)) return { overtime: 0, allowance: 0 };
+
+            // 25, 26 입력 호환 및 자정 이후(0, 1시 등) 입력 자동 보정
+            if (outT < inT) outT += 24;
+
+            let dObj = new Date(dateStr);
+            let dayOfWeek = dObj.getDay(); 
+            let y = dObj.getFullYear(), m = dObj.getMonth() + 1, d = dObj.getDate();
+            let isHolidayStr = getHolidayName(y, m, d) !== null;
+            let isRestDay = (dayOfWeek === 0 || dayOfWeek === 6 || isHolidayStr); 
+
+            let inside = 0;
+            let outside = 0;
+
+            // 시티투어(야): 출근 시간부터 9시간은 기본 근무로 인정
+            if (type && (type.includes('시티투어(야)') || type.includes('시티(야)'))) {
+                let baseEnd = inT + 9;
+                let rawInside = Math.max(0, Math.min(outT, baseEnd) - inT);
+                
+                inside = rawInside >= 5 ? rawInside - 1 : rawInside;
+                outside = Math.max(0, outT - baseEnd);
+            } else {
+                let insideStart = Math.max(inT, 9);
+                let insideEnd = Math.min(outT, 18);
+                inside = Math.max(0, insideEnd - insideStart); 
+
+                if (insideStart <= 12 && insideEnd >= 13) {
+                    inside = Math.max(0, inside - 1);
+                }
+
+                let early = Math.max(0, 9 - inT);
+                let late = Math.max(0, outT - 18);
+                outside = early + late; 
+            }
+
+            let overtime = 0;
+            if (isRestDay) {
+                overtime = (inside * 1.5) + (outside * 2.0);
+            } else {
+                overtime = (outside * 1.5);
+            }
+
+            overtime = Math.round(overtime * 100) / 100;
+
+            let allowance = 0;
+            if (type.includes('1박') || type.includes('2박')) {
+                allowance = 37500;
+            } else if (type.includes('공공') || type.includes('성묘') || type.includes('기타(외곽)') || type === '기타') {
+                allowance = 12500; 
+            } else if (type.includes('서울운행') || type === '서울' || type.includes('시티') || type.includes('기타(서울)')) {
+                allowance = 0; 
+            }
+
+            return { overtime: overtime, allowance: allowance };
+        }
+
+        function saveSettlement() {
+            const resId = document.getElementById('settle-res-id').value;
+            const clickedDate = document.getElementById('settle-date').value;
+            const isEarly = document.getElementById('settle-early').checked;
+            const clockIn = document.getElementById('settle-in').value;
+            const clockOut = document.getElementById('settle-out').value;
+
+            if (!resId || !clickedDate) return;
+            const d = allReservations.find(r => r.id === resId);
+            if (!d) return;
+
+            showLoading('계산 및 저장 중...');
+
+            const calc = calculateSettlement(clickedDate, clockIn, clockOut, d.type);
+            
+            if (!d.settlement) d.settlement = {};
+            if (!d.settlement[currentUser]) d.settlement[currentUser] = {};
+            
+            d.settlement[currentUser][clickedDate] = {
+                isEarly: isEarly,
+                clockIn: clockIn,
+                clockOut: clockOut,
+                overtime: calc.overtime,
+                allowance: calc.allowance
+            };
+
+            db.collection('reservations').doc(resId).set({ settlement: d.settlement }, { merge: true })
+            .then(() => {
+                alert(`[${currentUser}] 정산 입력 완료!\n보상: ${calc.overtime.toFixed(2)}시간 | 일비: ${calc.allowance.toLocaleString()}원`);
+                renderDispatchResult(currentDate); 
+                updateCalendarCellUI(currentDate); 
+                renderMonthlySummary(); 
+                closeDetailModal();
+                hideLoading();
+            })
+            .catch(error => {
+                alert('오류가 발생했습니다.');
+                hideLoading();
+            });
+        }
+
+        function deleteSettlement() {
+            const resId = document.getElementById('settle-res-id').value;
+            const clickedDate = document.getElementById('settle-date').value;
+
+            if (!resId || !clickedDate) return;
+            const d = allReservations.find(r => r.id === resId);
+            
+            if (!d || !d.settlement || !d.settlement[currentUser] || !d.settlement[currentUser][clickedDate]) {
+                alert("삭제할 내 정산 내역이 없습니다.");
+                return;
+            }
+
+            if (!confirm(`[${currentUser}]님의 이 날짜 정산 내역을 완전히 삭제하시겠습니까?`)) return;
+
+            showLoading('삭제 중...');
+            
+            const fieldPath = `settlement.${currentUser}.${clickedDate}`;
+            
+            db.collection('reservations').doc(resId).update({
+                [fieldPath]: firebase.firestore.FieldValue.delete()
+            })
+            .then(() => {
+                delete d.settlement[currentUser][clickedDate]; 
+                alert('깔끔하게 삭제되었습니다!');
+                renderDispatchResult(currentDate); 
+                updateCalendarCellUI(currentDate); 
+                renderMonthlySummary(); 
+                closeDetailModal();
+                hideLoading();
+            })
+            .catch(error => {
+                delete d.settlement[currentUser][clickedDate];
+                db.collection('reservations').doc(resId).set({ settlement: d.settlement }, { merge: true })
+                .then(() => {
+                    alert('깔끔하게 삭제되었습니다!');
+                    renderDispatchResult(currentDate); updateCalendarCellUI(currentDate); renderMonthlySummary(); closeDetailModal(); hideLoading();
+                }).catch(e => { alert('오류가 발생했습니다.'); hideLoading(); });
+            });
+        }
+
+        // 로그인한 아이디(currentUser)의 정산 내역만 보여주는 월간 정산 요약
+        function renderMonthlySummary() {
+            const container = document.getElementById('monthly-summary-container');
+            if (!container) return;
+            
+            let totalOvertime = 0;
+            let totalAllowance = 0;
+            let hasData = false;
+            let monthData = [];
+
+            allReservations.forEach(r => {
+                if (r.settlement && r.settlement[currentUser] && (r.assigned || []).includes(currentUser) && !r.isCanceled) {
+                    Object.keys(r.settlement[currentUser]).forEach(dateStr => {
+                        let [y, m, d] = dateStr.split('-');
+                        if (parseInt(y) === currentYear && parseInt(m) - 1 === currentMonth) {
+                            if ((r.dates || []).includes(dateStr)) {
+                                let s = r.settlement[currentUser][dateStr];
+                                monthData.push({
+                                    date: dateStr, day: parseInt(d),
+                                    overtime: s.overtime || 0, allowance: s.allowance || 0,
+                                    type: r.type, vehicle: r.vehicle
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+
+            monthData.sort((a, b) => a.day - b.day);
+
+            let listHtml = '';
+            monthData.forEach(item => {
+                hasData = true;
+                listHtml += `<li style="padding: 10px; border-bottom: 1px solid #eee;">
+                <span style="color:#333; font-weight:bold; font-size:0.85rem; display:inline-block; width:39px;">${currentMonth + 1}/${item.day}</span>
+                <span style="color:#555; font-size:0.80rem;">보상: 
+                    <b style="color:#007bff; display:inline-block; width:39px; text-align:right;">${Number(item.overtime || 0).toFixed(2)}</b> 
+                    <span style="color:#ccc; margin:0 4px;">:</span> 
+                    일비: 
+                    <b style="color:#007bff; display:inline-block; width:50px; text-align:right;">${Number(item.allowance || 0).toLocaleString()}</b>원
+                </span>
+             </li>`;
+                totalOvertime += (item.overtime || 0);
+                totalAllowance += (item.allowance || 0);
+            });
+
+            if (!hasData) { 
+                listHtml += `<li style="color:#666; padding:10px; font-size: 0.8rem; text-align:center;">이번 달 [${currentUser}]님의 정산 내역이 없습니다.</li>`; 
+            }
+
+            let html = `<h3 style="margin-bottom: 10px; border-bottom: 2px solid #28a745; padding-bottom: 8px; font-size: 1.1rem; color: #155724;">💰 ${currentMonth + 1}월 [${currentUser}] 정산 요약</h3>`;
+            
+            html += `<div style="background:#e8f0fe; padding:12px; border-radius:6px; margin:10px 0; border:1px solid #c6dafc; display:flex; justify-content:center;">`;
+            html += `<table style="font-size:0.95rem; font-weight:bold; color:#333; border-spacing:0;">`;
+            
+            html += `<tr>`;
+            html += `<td style="text-align:right; padding-right:15px; padding-bottom:5px;">총합계 보상 :</td>`;
+            html += `<td style="text-align:right; color:#007bff; font-size:1.15rem; padding-right:5px; padding-bottom:5px;">${Number(totalOvertime || 0).toFixed(2)}</td>`;
+            html += `<td style="text-align:left; padding-bottom:5px;">T</td>`;
+            html += `</tr>`;
+            
+            html += `<tr>`;
+            html += `<td style="text-align:right; padding-right:15px;">총합계 일비 :</td>`;
+            html += `<td style="text-align:right; color:#007bff; font-size:1.15rem; padding-right:5px;">${Number(totalAllowance || 0).toLocaleString()}</td>`;
+            html += `<td style="text-align:left;">원</td>`;
+            html += `</tr>`;
+            
+            html += `</table>`;
+            html += `</div>`;
+            
+            html += `<ul class="result-list" style="padding:0; margin-top:0; max-height: 220px; overflow-y: auto;">`; 
+            html += listHtml;
+            html += `</ul>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderDispatchResult(date) {
+            const contentUl = document.getElementById('result-content');
+            const activeReservations = allReservations.filter(r => (r.dates || []).includes(date));
+
+            let html = '';
+
+            if (dailyMemos[date]) {
+                html += `
+                <li style="background-color: #fff3cd; border: 2px solid #ffeeba; margin-bottom: 12px; border-radius: 6px; padding: 15px; cursor: pointer; display: flex; flex-direction: column; gap: 8px;" onclick="handleMemo()">
+                    <div><span style="background: #ffc107; color: #000; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 900;">📌 공지 및 메모</span></div>
+                    <div style="color: #004085; font-weight: 700; font-size: 1.05rem; line-height: 1.5; white-space: pre-wrap;">${dailyMemos[date]}</div>
+                </li>`;
+            }
+
+            if (activeReservations.length === 0) {
+                html += `<li style="color:#666; border:none; background:transparent; padding:0 0 10px 0;">${date} 등록된 예약 내역이 없습니다.</li>`;
+            } else {
+                activeReservations.forEach(d => {
+                    let shortTypeStr = getShortType(d.type);
+                    let badgeClass = 'default';
+
+                    if (shortTypeStr === '공공') badgeClass = 'pub';
+                    else if (shortTypeStr === '성묘') badgeClass = 'grave';
+                    else if (shortTypeStr === '1박') badgeClass = 'night1';
+                    else if (shortTypeStr === '2박') badgeClass = 'night2';
+                    else if (shortTypeStr === '서울') badgeClass = 'seoul';
+                    else if (shortTypeStr === '시티' || shortTypeStr === '시티(야)') badgeClass = 'citytour';
+                    else if (shortTypeStr === '기타') badgeClass = 'default';
+
+                    if (d.isManual) badgeClass = 'manual-badge';
+
+                    let canceledLiStyle = d.isCanceled ? 'color: #adb5bd; text-decoration: line-through;' : '';
+                    let canceledBadgeStyle = d.isCanceled ? 'background-color: transparent; color: #adb5bd; border: 1px solid #adb5bd;' : '';
+                    
+                    let isMyDispatch = (d.assigned || []).includes(currentUser);
+                    let assignedNamesHTML = (d.assigned || []).map(name => {
+                        let isUnderline = (d.settlement && d.settlement[name] && d.settlement[name][date] && d.settlement[name][date].isEarly) || false;
+                        let dispName = name;
+                        if (name === currentUser && !d.isCanceled) {
+                            dispName = `<span style="color:#0056b3; font-weight:900;">${dispName}</span>`;
+                        }
+                        return (isUnderline && !d.isCanceled && name !== '미지정') ? `<span class="early-underline">${dispName}</span>` : dispName;
+                    }).join(', ');
+                    
+                    if ((d.assigned || []).length === 0) assignedNamesHTML = '인원 부족';
+
+                    // 로그인한 아이디(currentUser)의 정산 내역만 표시
+                    let reportText = '';
+                    const mySettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][date]) ? d.settlement[currentUser][date] : null;
+                    if (mySettle) {
+                        reportText = `<div style="margin-top:8px; font-size:0.85rem; color:#155724; background:#d4edda; padding:6px 10px; border-radius:4px; border: 1px solid #c3e6cb;">
+                            <b>[${currentUser} 정산]</b> ${mySettle.isEarly ? '[선운행] ' : ''}근무: ${mySettle.clockIn || '-'} ~ ${mySettle.clockOut || '-'} | 보상: <b>${Number(mySettle.overtime || 0).toFixed(2)}</b>시간 | 일비: <b>${Number(mySettle.allowance || 0).toLocaleString()}</b>원
+                        </div>`;
+                    }
+
+                    let attachIcon = d.photoUrl ? ' <span style="font-size:0.9rem;">📎</span>' : '';
+                    let highlightStyle = (isMyDispatch && !d.isCanceled) ? 'border: 2px solid #007bff; background-color: #f0f7ff;' : '';
+
+                    html += `
+                        <li style="${canceledLiStyle} ${highlightStyle} cursor: pointer;" onclick="showDispatchDetail(event, '${d.id}', '${date}')">
+                            <b>[${d.vehicle}]</b>${attachIcon} 
+                            <span class="badge ${badgeClass}" style="${canceledBadgeStyle}">${shortTypeStr}</span> 
+                            <span class="badge default" style="margin-right:0; ${canceledBadgeStyle}">${d.km}km</span>
+                            ${d.isCanceled ? '<span style="color:#d9534f; font-weight:bold; margin-left:5px; text-decoration:none;">[취소됨]</span>' : ''}<br>
+                            <span style="color: #007bff; font-weight: bold; font-size: 0.95rem; margin: 4px 0; display: inline-block;">[${d.start || '미입력'} ➔ ${d.end || '미입력'}]</span><br>
+                            내용: ${d.dest} <br>
+                            운전원: <b style="${d.isCanceled ? 'color:#adb5bd;' : 'color:#28a745;'}">${assignedNamesHTML}</b>
+                            ${reportText}
+                        </li>`;
+                });
+            }
+
+            const statusData = dailyDriverStatus[date] || {};
+            const offDrivers = Object.keys(statusData).filter(d => statusData[d] === '휴무');
+            const dutyDrivers = Object.keys(statusData).filter(d => statusData[d] === '당직');
+
+            if (dutyDrivers.length > 0 || offDrivers.length > 0) {
+                html += `<li style="background-color: #fff; border: 2px dashed #007bff; margin-top: 10px; border-radius: 6px;">`;
+                if (dutyDrivers.length > 0) {
+                    html += `<div style="margin-bottom: ${offDrivers.length > 0 ? '8px' : '0'};"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
+                }
+                if (offDrivers.length > 0) {
+                    let offNames = offDrivers.map(n => getDispName(n)).join(', ');
+                    html += `<div><span style="color:#d9534f; font-weight:bold;">휴무: </span><span style="color:#007bff; font-weight:bold;">${offNames}</span></div>`;
+                }
+                html += `</li>`;
+            }
+            contentUl.innerHTML = html;
+            
+            const attachmentUl = document.getElementById('daily-attachment-list');
+            if (attachmentUl) {
+                const files = (typeof dailyAttachments !== 'undefined' && dailyAttachments[date]) ? dailyAttachments[date] : [];
+                let attachHtml = '';
+                let optionsHtml = '<option value="">연결 안 함 (선택)</option>';
+                
+                if (files.length > 0) {
+                    files.forEach((f, idx) => {
+                        attachHtml += `
+                            <li style="margin-bottom: 5px; display: flex; gap: 5px; align-items: center;">
+                                <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #0056b3; background: #f0f7ff; border: 1px solid #b8daff; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
+                                    📎 ${f.name}
+                                </a>
+                                <button onclick="deleteDailyFile('${date}', ${idx})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">삭제</button>
+                            </li>`;
+                        optionsHtml += `<option value="${f.url}">${f.name}</option>`;
+                    });
+                }
+                attachmentUl.innerHTML = attachHtml;
+
+                document.querySelectorAll('.daily-photo-selector').forEach(select => {
+                    select.innerHTML = optionsHtml;
+                });
+            }
+        }
+
+        function renderStatusPanel(date) {
+            const container = document.getElementById('status-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const currentDrivers = getEffectiveDriverList(date);
+            currentDrivers.forEach(driver => {
+                const currentStatus = getDriverStatus(date, driver);
+                container.innerHTML += `
+                    <div class="status-item">
+                        <strong>${driver}</strong>
+                        <div class="radio-group">
+                            <label><input type="radio" name="st_${driver}" value="출근" ${currentStatus === '출근' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '출근', '${currentStatus}')">출근</label>
+                            <label><input type="radio" name="st_${driver}" value="당직" ${currentStatus === '당직' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '당직', '${currentStatus}')">당직</label>
+                            <label><input type="radio" name="st_${driver}" value="휴무" ${currentStatus === '휴무' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '휴무', '${currentStatus}')">휴무</label>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function selectDate(dateStr) {
+            currentDate = dateStr;
+            sessionStorage.setItem('lastSelectedDate', dateStr);
+            
+            closeAllForms(); 
+            renderCalendar(); 
+            document.getElementById('result-title').innerText = `최종 배차 결과 (${dateStr})`;
+            renderStatusPanel(dateStr); 
+            renderDispatchResult(dateStr); 
+            renderMonthlySummary();
+            updateDropdownOptions(dateStr); 
+
+            setTimeout(() => {
+                const grid = document.getElementById('calendar-grid');
+                const selectedCell = document.querySelector('.calendar-cell.selected');
+                
+                if (grid && selectedCell) {
+                    const scrollPos = selectedCell.offsetLeft - (grid.clientWidth / 2) + (selectedCell.clientWidth / 2);
+                    grid.scrollTo({ left: scrollPos, behavior: 'smooth' });
+                }
+            }, 300);
+        }
+
+        function checkAuth() {
+            currentUser = localStorage.getItem('loggedInUser');
+
+            if (!currentUser) {
+                document.getElementById('login-container').style.display = 'flex';
+                document.getElementById('app-container').style.display = 'none';
+                return false;
+            } else {
+                // 통합 화면: 누구나 로그인하면 메인(관리자) 화면으로 바로 진입
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('app-container').style.display = 'block';
+                document.getElementById('welcome-msg').innerText = `${getDispName(currentUser)}님 통합관리`;
+                return true;
+            }
+        }
+
+        window.onload = () => {
+            if(checkAuth()) {
+                const _now = new Date();
+                currentYear = _now.getFullYear(); 
+                currentMonth = _now.getMonth(); 
+                
+                const savedDate = sessionStorage.getItem('lastSelectedDate');
+                if (savedDate) {
+                    currentDate = savedDate;
+                    const parts = savedDate.split('-');
+                    currentYear = parseInt(parts[0]);
+                    currentMonth = parseInt(parts[1]) - 1; 
+                } else {
+                    currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`; 
+                }
+                
+                loadFromFirebase();
+            }
+        };
+
+        // 스마트폰 뒤로가기 시 팝업 닫기 방어 코드
+        (function() {
+            const pushModalState = () => history.pushState({ isModal: true }, '', '');
+            const popModalState = () => { if (history.state && history.state.isModal) history.back(); };
+
+            const oriShowDetail = window.showDispatchDetail;
+            window.showDispatchDetail = function(e, id, d) { pushModalState(); if(oriShowDetail) oriShowDetail(e, id, d); };
+            const oriCloseDetail = window.closeDetailModal;
+            window.closeDetailModal = function() { if(oriCloseDetail) oriCloseDetail(); popModalState(); };
+
+            const oriOpenPw = window.openPwModal;
+            window.openPwModal = function() { pushModalState(); if(oriOpenPw) oriOpenPw(); };
+            const oriClosePw = window.closePwModal;
+            window.closePwModal = function() { if(oriClosePw) oriClosePw(); popModalState(); };
+
+            if(typeof window.openDriverEditModal === 'function') {
+                const oriOpenDriver = window.openDriverEditModal;
+                window.openDriverEditModal = function() { pushModalState(); oriOpenDriver(); };
+                const oriCloseDriver = window.closeDriverModal;
+                window.closeDriverModal = function() { if(oriCloseDriver) oriCloseDriver(); popModalState(); };
+            }
+
+            window.addEventListener('popstate', function() {
+                const modals = ['detail-modal-overlay', 'pw-modal-overlay', 'modal-overlay'];
+                modals.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.style.display === 'flex') el.style.display = 'none';
+                });
+            });
+        })();
+
+        async function uploadDailyFile() {
+            if (!currentDate) return alert('먼저 달력에서 날짜를 선택해주세요!');
+            const fileInput = document.getElementById('daily-upload-file');
+            const file = fileInput.files[0];
+            if (!file) return alert('업로드할 신청서 파일을 선택해주세요.');
+
+            const status = document.getElementById('daily-upload-status');
+            status.style.display = 'block';
+            status.innerText = '🚀 파일을 서버로 올리는 중입니다...';
+
+            try {
+                const storageRef = firebase.storage().ref();
+                const fileRef = storageRef.child(`daily_docs/${currentDate}_${Date.now()}_${file.name}`);
+                await fileRef.put(file);
+                const url = await fileRef.getDownloadURL();
+
+                const docRef = db.collection('daily_attachments').doc(currentDate);
+                const doc = await docRef.get();
+                let files = [];
+                if (doc.exists) { files = doc.data().files || []; }
+                
+                files.push({ name: file.name, url: url });
+                await docRef.set({ files: files });
+
+                status.innerText = '✅ 업로드 완료!';
+                fileInput.value = '';
+                setTimeout(() => status.style.display = 'none', 2000);
+            } catch (error) {
+                console.error(error);
+                status.innerText = '❌ 업로드 실패. 다시 시도해주세요.';
+            }
+        }
+
+        async function deleteDailyFile(date, idx) {
+            if (!confirm('이 신청서를 정말 삭제하시겠습니까?')) return;
+            try {
+                let files = dailyAttachments[date] || [];
+                files.splice(idx, 1);
+                await db.collection('daily_attachments').doc(date).set({ files: files });
+            } catch (error) { alert('삭제 실패'); }
+        }
+
+        let isMobileView = true;
+        function toggleViewMode() {
+            const viewport = document.querySelector('meta[name="viewport"]');
+            const btn = document.getElementById('btn-toggle-view');
+            
+            if (isMobileView) {
+                viewport.setAttribute('content', 'width=1050, user-scalable=yes');
+                btn.innerText = '📱폰화면';
+                btn.style.background = '#ffc107';
+                btn.style.color = '#000';
+                isMobileView = false;
+            } else {
+                viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes');
+                btn.innerText = 'PC버전';
+                btn.style.background = '#17a2b8';
+                btn.style.color = '#fff';
+                isMobileView = true;
+            }
+        }
+    </script>
+</body>
+</html>
