@@ -268,12 +268,12 @@
                 <div class="card">
                     <div class="calendar-header">
                         <span id="month-display">26년 10월</span>
-                        <!-- 정비 & PC버전 버튼 사이즈 통일 -->
+                        <!-- 정비 & PC버전 버튼 사이즈 고정 -->
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
-                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
-                            <button onclick="changeMonth(-1)">&lt;</button>
-                            <button onclick="changeMonth(1)">&gt;</button>
+                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">PC버전</button>
+                            <button onclick="changeMonth(-1)">＜</button>
+                            <button onclick="changeMonth(1)">＞</button>
                         </div>
                     </div>
                     <div class="calendar-grid" id="calendar-grid"></div>
