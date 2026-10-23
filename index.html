@@ -257,9 +257,8 @@
                 <span style="font-size: 1.2rem; opacity: 0.8;">⚙️</span>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
-                <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.75rem; cursor: pointer;">집계</button>
-                <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 0.75rem;">로그아웃</button>
-            </div>
+                <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">집계</button>
+                <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">로그아웃</button>
             </div>
         </div>
 
@@ -267,11 +266,11 @@
             <div class="main-section">
                 <div class="card">
                     <div class="calendar-header">
-                        <span id="month-display">26년 10월</span>
+                        <span id="month-display" onclick="goToToday()" style="cursor:pointer;" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
                         <!-- 정비 & PC버전 버튼 사이즈 고정 -->
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
-                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">PC버전</button>
+                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
                             <button onclick="changeMonth(-1)">＜</button>
                             <button onclick="changeMonth(1)">＞</button>
                         </div>
@@ -280,9 +279,12 @@
                 </div>
 
                 <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
                         <h3 id="result-title" style="margin:0;">최종 배차 결과</h3>
-                        <button id="btn-memo" onclick="handleMemo()" style="background:#ffc107; color:#000; border:1px solid #e0a800; border-radius:4px; padding:4px 8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">📝 공지/메모</button>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="btn-holiday" onclick="handleHoliday()" style="background:#dc3545; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">📅 휴일지정</button>
+                            <button id="btn-memo" onclick="handleMemo()" style="background:#ffc107; color:#000; border:1px solid #e0a800; border-radius:4px; padding:4px 8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">📝 공지/메모</button>
+                        </div>
                     </div>
                     <p style="font-size: 0.8rem; color: #007bff; margin-bottom: 8px; font-weight: 600;">💡 배차 내역(또는 달력 배지)을 누르면 운행 시간(정산) 입력 및 첨부파일 확인이 가능합니다.</p>
                     <ul id="result-content" class="result-list">
@@ -464,11 +466,6 @@
             "2027-10-04": "대체공휴일", "2027-10-11": "대체공휴일", "2027-12-27": "대체공휴일"
         };
         
-        function getHolidayName(year, month, day) {
-            const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            return koreaHolidays[`${year}-${mmdd}`] || koreaHolidays[mmdd] || null;
-        }
-
         const defaultDrivers = ['박기준', '변석현', '이명순', '김탁', '한상훈', '문인식', '황덕일', '강철규', '이상헌', '함동한', '정한중', '조병준'];
         let driverListModifiers = {}; 
         let engineModifiers = {}; 
@@ -479,11 +476,21 @@
         let currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`; 
         
         let dailyDriverStatus = {}; 
-        let autoDutyByDate = {}; // 🚀 날짜별 자동 계산된 당번(당직) 저장소
+        let autoDutyByDate = {}; // 날짜별 자동+수동 계산된 당번(당직) 저장소
         let allReservations = [];
         let dailyMemos = {}; 
         let dailyAttachments = {};
         let currentUser = '';
+
+        // 🚀 기본 공휴일 + 사용자가 직접 지정한 휴일(_holidayName) 통합 확인 함수
+        function getHolidayName(year, month, day) {
+            const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dateStr = `${year}-${mmdd}`;
+            if (dailyDriverStatus[dateStr] && dailyDriverStatus[dateStr]._holidayName) {
+                return dailyDriverStatus[dateStr]._holidayName;
+            }
+            return koreaHolidays[dateStr] || koreaHolidays[mmdd] || null;
+        }
 
         function showLoading(msg = '서버 처리 중...') {
             document.getElementById('loading-text').innerText = msg;
@@ -685,6 +692,32 @@
             }
         }
 
+        // 🚀 휴일(대체공휴일/임시공휴일 등) 직접 지정 및 해제 함수
+        async function handleHoliday() {
+            if (!currentDate) return;
+            const currentCustom = (dailyDriverStatus[currentDate] && dailyDriverStatus[currentDate]._holidayName) ? dailyDriverStatus[currentDate]._holidayName : '';
+            const newHoliday = prompt(`[${currentDate}] 휴일(대체공휴일·임시공휴일 등) 명칭을 입력하세요.\n지정 즉시 달력 숫자가 빨간색으로 바뀌며, 당직 제외 및 휴일 정산이 적용됩니다.\n(※ 내용을 모두 지우고 확인을 누르면 휴일 지정이 해제됩니다.)`, currentCustom);
+            
+            if (newHoliday === null) return;
+            
+            showLoading('휴일 설정 저장 중...');
+            if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
+            
+            try {
+                if (newHoliday.trim() === '') {
+                    delete dailyDriverStatus[currentDate]._holidayName;
+                    await db.collection('daily_status').doc(currentDate).set(dailyDriverStatus[currentDate]);
+                } else {
+                    dailyDriverStatus[currentDate]._holidayName = newHoliday.trim();
+                    await db.collection('daily_status').doc(currentDate).set(dailyDriverStatus[currentDate]);
+                }
+                recalculateAll(false);
+            } catch (e) {
+                alert('휴일 설정 저장 실패');
+            }
+            hideLoading();
+        }
+
         async function handleMemo() {
             if (!currentDate) return;
             const currentMemo = dailyMemos[currentDate] || '';
@@ -746,9 +779,10 @@
                 recalculateAll(false); 
                 hideLoading();
 
+                // 🚀 최초 로드 시 상하·좌우 동시 중앙 이동(true) 실행!
                 if (isInitialLoad && currentDate) {
                     isInitialLoad = false;
-                    selectDate(currentDate);
+                    selectDate(currentDate, true);
                 } else {
                     renderCalendar();
                     renderMonthlySummary();
@@ -962,19 +996,35 @@
             return dailyDriverStatus[date][driver] || '출근';
         }
 
-        // 🚀 해당 날짜의 당번(당직) 명단 가져오기 (자동 + 수동 통합)
         function getDutyDriversForDate(date) {
             return autoDutyByDate[date] || [];
         }
 
-        // 🚀 당번(당직) 자동 순환 계산 엔진
-        // 규칙: 주말/공휴일 제외, 함동한 제외, 휴무자 제외, 당일 운행자 제외(4일전 취소자는 포함), 직전 당번 다음 순번부터 배정
+        // 🚀 2026-10-22(문인식) 기준 당번(당직) 자동 순환 엔진 (오늘 기준 2주 이내 평일 전체)
         function calculateAutoDuty() {
             autoDutyByDate = {};
             if (!loadedStartStr || !loadedEndStr) return;
 
-            let cur = new Date(loadedStartStr);
-            const end = new Date(loadedEndStr);
+            const anchorDateStr = '2026-10-22';
+            const anchorDriver = '문인식';
+
+            // 오늘 날짜 기준 14일(2주) 뒤 날짜 계산
+            const todayObj = new Date();
+            const maxDutyObj = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate() + 14);
+            const maxDutyStr = `${maxDutyObj.getFullYear()}-${String(maxDutyObj.getMonth() + 1).padStart(2, '0')}-${String(maxDutyObj.getDate()).padStart(2, '0')}`;
+
+            // 1. 2026-10-22 이전 날짜는 기존에 수동 지정된 당직만 그대로 표시
+            Object.keys(dailyDriverStatus).forEach(dateStr => {
+                if (dateStr < anchorDateStr) {
+                    const statusData = dailyDriverStatus[dateStr] || {};
+                    const manualDuty = Object.keys(statusData).filter(k => !k.startsWith('_') && statusData[k] === '당직');
+                    if (manualDuty.length > 0) autoDutyByDate[dateStr] = manualDuty;
+                }
+            });
+
+            // 2. 2026-10-22부터 순차 계산
+            let cur = new Date(2026, 9, 22); // 2026-10-22
+            const end = new Date(loadedEndStr > maxDutyStr ? loadedEndStr : maxDutyStr);
             let lastDutyDriver = null;
 
             while (cur <= end) {
@@ -984,15 +1034,31 @@
                 const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayOfWeek = cur.getDay();
                 const isHoliday = getHolidayName(y, m, d) !== null;
+                const statusData = dailyDriverStatus[dateStr] || {};
 
-                // 1. 주말(토·일) 및 공휴일은 당번 없음
+                // 주말(파란색/빨간색) 및 공휴일·지정휴일(빨간색)은 당번 제외 (순번 대기)
                 if (dayOfWeek === 0 || dayOfWeek === 6 || isHoliday) {
                     autoDutyByDate[dateStr] = [];
                     cur.setDate(cur.getDate() + 1);
                     continue;
                 }
 
-                // 2. 해당 날짜의 유효 운행자 파악 (4일전 취소된 배차는 운행자에서 제외 -> 당번 가능!)
+                // 오늘 기준 2주(14일)를 넘어가는 미래 날짜는 수동 지정만 표시하고 자동 배정 중지
+                if (dateStr > maxDutyStr) {
+                    const manualFuture = Object.keys(statusData).filter(k => !k.startsWith('_') && statusData[k] === '당직');
+                    autoDutyByDate[dateStr] = manualFuture;
+                    cur.setDate(cur.getDate() + 1);
+                    continue;
+                }
+
+                // 사용자가 수동으로 당직을 비운 날(_skipDuty)이면 비워두고 순번 대기
+                if (statusData._skipDuty) {
+                    autoDutyByDate[dateStr] = [];
+                    cur.setDate(cur.getDate() + 1);
+                    continue;
+                }
+
+                // 해당 날짜의 유효 운행자 파악 (4일전 취소된 배차는 운행자에서 제외 -> 당번 가능)
                 const dayRes = allReservations.filter(r => (r.dates || []).includes(dateStr));
                 const workingDrivers = new Set();
                 dayRes.forEach(r => {
@@ -1001,19 +1067,29 @@
                     }
                 });
 
-                const statusData = dailyDriverStatus[dateStr] || {};
-                // 수동으로 지정된 당직자가 있고, 그 사람이 당일 유효 운행이나 휴무가 아니면 수동 지정 우선(기준점 역할)
+                // 수동으로 지정한 당직자가 있는지 먼저 확인
                 const manualDuty = Object.keys(statusData).filter(drv =>
+                    !drv.startsWith('_') &&
                     statusData[drv] === '당직' &&
                     drv !== '함동한' &&
+                    getDriverStatus(dateStr, drv) !== '휴무' &&
                     !workingDrivers.has(drv)
                 );
 
                 if (manualDuty.length > 0) {
                     autoDutyByDate[dateStr] = manualDuty;
                     lastDutyDriver = manualDuty[manualDuty.length - 1];
-                } else if (dayRes.length > 0) {
-                    // 3. 배차가 등록된 평일: 직전 당번의 다음 순번부터 조건에 맞는 첫 번째 운전원 자동 선발
+                } else if (dateStr === anchorDateStr) {
+                    // 10월 22일 기준점: 문인식 우선 배정
+                    if (!workingDrivers.has(anchorDriver) && getDriverStatus(dateStr, anchorDriver) !== '휴무') {
+                        autoDutyByDate[dateStr] = [anchorDriver];
+                        lastDutyDriver = anchorDriver;
+                    } else {
+                        autoDutyByDate[dateStr] = [];
+                        lastDutyDriver = anchorDriver;
+                    }
+                } else {
+                    // 일반 평일: 직전 당번의 다음 순번부터 조건에 맞는 첫 번째 운전원 선발
                     const currentList = getEffectiveDriverList(dateStr);
                     let startIndex = 0;
                     if (lastDutyDriver && currentList.includes(lastDutyDriver)) {
@@ -1025,7 +1101,7 @@
                         const candidate = currentList[(startIndex + i) % currentList.length];
                         if (candidate === '함동한') continue; // 함동한 제외
                         if (getDriverStatus(dateStr, candidate) === '휴무') continue; // 휴무자 제외
-                        if (workingDrivers.has(candidate)) continue; // 당일 운행자 제외 (취소자는 통과)
+                        if (workingDrivers.has(candidate)) continue; // 당일 운행자 제외 (4일전 취소자는 포함)
 
                         picked = candidate;
                         break;
@@ -1035,10 +1111,9 @@
                         autoDutyByDate[dateStr] = [picked];
                         lastDutyDriver = picked;
                     } else {
+                        // 근무 가능한 인원이 0명이면 칸을 비우고 순번(lastDutyDriver)은 그대로 대기
                         autoDutyByDate[dateStr] = [];
                     }
-                } else {
-                    autoDutyByDate[dateStr] = [];
                 }
 
                 cur.setDate(cur.getDate() + 1);
@@ -1051,16 +1126,22 @@
             }
             if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
 
-            // 수동으로 특정 운전원을 '당직'으로 찍으면 기존 수동 당직을 해제하고 해당 운전원을 기준점으로 설정
             if (newStatus === '당직') {
+                // 다른 사람을 수동으로 '당직' 지정 시 기존 수동 당직 해제 및 비우기(_skipDuty) 해제
+                delete dailyDriverStatus[currentDate]._skipDuty;
                 Object.keys(dailyDriverStatus[currentDate]).forEach(k => {
-                    if (dailyDriverStatus[currentDate][k] === '당직') {
+                    if (!k.startsWith('_') && dailyDriverStatus[currentDate][k] === '당직') {
                         dailyDriverStatus[currentDate][k] = '출근';
                     }
                 });
+                dailyDriverStatus[currentDate][driver] = '당직';
+            } else if (oldStatus === '당직' && newStatus === '출근') {
+                // 현재 당직인 사람을 '출근'으로 바꾸면 그날 당직을 비움 처리
+                dailyDriverStatus[currentDate]._skipDuty = true;
+                dailyDriverStatus[currentDate][driver] = '출근';
+            } else {
+                dailyDriverStatus[currentDate][driver] = newStatus;
             }
-
-            dailyDriverStatus[currentDate][driver] = newStatus;
             
             recalculateAll(true); 
             renderStatusPanel(currentDate);
@@ -1168,7 +1249,7 @@
                 }
             });
 
-            // 🚀 배차 계산 직후 당번(당직) 자동 순번 계산 실행!
+            // 배차 계산 직후 당번(당직) 자동 순번 계산 실행
             calculateAutoDuty();
 
             if (shouldSaveToDB) {
@@ -1309,6 +1390,15 @@
             }
         }
 
+        // 달력 상단 연월 제목 클릭 시 오늘 날짜로 상하·좌우 즉시 이동
+        function goToToday() {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth();
+            const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            selectDate(todayStr, true);
+        }
+
         function renderCalendar() {
             const shortYear = currentYear.toString().slice(-2);
             document.getElementById('month-display').innerText = `${shortYear}년 ${currentMonth + 1}월`;
@@ -1332,7 +1422,7 @@
                 if (dateStr === currentDate) extraClass += 'selected ';
 
                 grid.innerHTML += `
-                    <div class="calendar-cell ${extraClass}" data-date="${dateStr}" onclick="selectDate('${dateStr}')">
+                    <div class="calendar-cell ${extraClass}" id="cell_${dateStr}" data-date="${dateStr}" onclick="selectDate('${dateStr}', false)">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span class="date-num">${d}</span>${extraHTML}
                         </div>
@@ -1398,11 +1488,11 @@
             tagsContainer.innerHTML = tagsHTML;
 
             const statusData = dailyDriverStatus[date] || {};
-            const offDrivers = Object.keys(statusData).filter(d => statusData[d] === '휴무');
-            const dutyDrivers = getDutyDriversForDate(date); // 🚀 자동+수동 당번 불러오기
+            const offDrivers = Object.keys(statusData).filter(d => !d.startsWith('_') && statusData[d] === '휴무');
+            const dutyDrivers = getDutyDriversForDate(date);
 
             let statusHTML = '';
-            // 🚀 휴무자 바로 위 (휴무자가 없으면 칸 맨 밑)에 당직 표시
+            // 휴무자 바로 위 (휴무자가 없으면 칸 맨 밑)에 당직 표시
             if (dutyDrivers.length > 0) {
                 statusHTML += `<div class="cal-status duty"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
             }
@@ -1766,8 +1856,8 @@
             }
 
             const statusData = dailyDriverStatus[date] || {};
-            const offDrivers = Object.keys(statusData).filter(d => statusData[d] === '휴무');
-            const dutyDrivers = getDutyDriversForDate(date); // 🚀 자동+수동 당번 불러오기
+            const offDrivers = Object.keys(statusData).filter(d => !d.startsWith('_') && statusData[d] === '휴무');
+            const dutyDrivers = getDutyDriversForDate(date);
 
             if (dutyDrivers.length > 0 || offDrivers.length > 0) {
                 html += `<li style="background-color: #fff; border: 2px dashed #007bff; margin-top: 10px; border-radius: 6px;">`;
@@ -1819,7 +1909,6 @@
             currentDrivers.forEach(driver => {
                 const rawStatus = getDriverStatus(date, driver);
                 const isDuty = dutyDrivers.includes(driver);
-                // 휴무가 아니면서 자동/수동 당직에 해당하면 '당직'에 체크 표시
                 const displayStatus = (rawStatus === '휴무') ? '휴무' : (isDuty ? '당직' : '출근');
 
                 container.innerHTML += `
@@ -1834,7 +1923,8 @@
             });
         }
 
-        function selectDate(dateStr) {
+        // 🚀 scrollVertical이 true(최초 접속/오늘 이동)면 정비창처럼 상하·좌우 동시 중앙 이동!
+        function selectDate(dateStr, scrollVertical = false) {
             currentDate = dateStr;
             sessionStorage.setItem('lastSelectedDate', dateStr);
             
@@ -1847,14 +1937,18 @@
             updateDropdownOptions(dateStr); 
 
             setTimeout(() => {
+                const selectedCell = document.getElementById(`cell_${dateStr}`) || document.querySelector('.calendar-cell.selected');
                 const grid = document.getElementById('calendar-grid');
-                const selectedCell = document.querySelector('.calendar-cell.selected');
                 
-                if (grid && selectedCell) {
-                    const scrollPos = selectedCell.offsetLeft - (grid.clientWidth / 2) + (selectedCell.clientWidth / 2);
-                    grid.scrollTo({ left: scrollPos, behavior: 'smooth' });
+                if (selectedCell) {
+                    if (scrollVertical) {
+                        selectedCell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    } else if (grid) {
+                        const scrollPos = selectedCell.offsetLeft - (grid.clientWidth / 2) + (selectedCell.clientWidth / 2);
+                        grid.scrollTo({ left: scrollPos, behavior: 'smooth' });
+                    }
                 }
-            }, 300);
+            }, 250);
         }
 
         function checkAuth() {
