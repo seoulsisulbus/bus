@@ -9,6 +9,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <!-- 🚀 무료 한글 문서 인식(OCR) 엔진 탑재 -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -250,7 +252,7 @@
             </div>
         </div>
 
-        <!-- 상단 바 (집계 & 로그아웃 버튼 사이즈 통일) -->
+        <!-- 상단 바 -->
         <div style="max-width: 1600px; margin: 10px auto 0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; gap: 6px;">
             <div onclick="openPwModal()" style="cursor: pointer; display: flex; align-items: center; gap: 5px;" title="비밀번호 변경">
                 <span id="welcome-msg" style="font-weight: bold; color: #333; font-size: 1.15rem;"></span>
@@ -267,7 +269,7 @@
                 <div class="card">
                     <div class="calendar-header">
                         <span id="month-display" onclick="goToToday()" style="cursor:pointer;" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
-                        <!-- 정비 & PC버전 버튼 사이즈 고정 -->
+                        <!-- 정비 & PC버전 버튼 사이즈 고정 (요청 사이즈 유지) -->
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
                             <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
@@ -305,10 +307,10 @@
                 <div style="margin-bottom: 20px; background: #e8f0fe; padding: 12px; border-radius: 6px; border: 1px dashed #007bff;">
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <label style="margin: 0; font-size: 1rem; font-weight: 800; color: #0056b3;">📎 이 날짜의 신청서 추가</label>
-                        <input type="file" id="daily-upload-file" style="font-size: 0.85rem; cursor: pointer; width: 100%; background: #fff; padding: 4px; border-radius: 4px; border: 1px solid #ccc;" onchange="uploadDailyFile()">
+                        <input type="file" id="daily-upload-file" accept="image/*,.pdf" style="font-size: 0.85rem; cursor: pointer; width: 100%; background: #fff; padding: 4px; border-radius: 4px; border: 1px solid #ccc;" onchange="uploadDailyFile()">
                     </div>
                     <div id="daily-upload-status" style="font-size: 0.85rem; color: #dc3545; font-weight: bold; margin-top: 8px; display: none;">🚀 서버에 올리는 중입니다...</div>
-                    <ul id="daily-attachment-list" style="list-style: none; padding: 0; margin: 0;"></ul>
+                    <ul id="daily-attachment-list" style="list-style: none; padding: 0; margin: 8px 0 0 0;"></ul>
                 </div>
 
                 <h3>배차 예약 정보 입력</h3>
@@ -368,8 +370,8 @@
                                 </div>
                             
                                 <div class="form-group" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #007bff; margin-top:15px;">
-                                    <label style="color: #007bff; font-weight:700;">📎 신청서 연결 (보관함에서 선택)</label>
-                                    <select id="photo_select_${v}" class="daily-photo-selector" style="width: 100%; padding: 6px; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+                                    <label style="color: #007bff; font-weight:700;">📎 신청서 연결 (선택 시 출발/도착지 자동입력)</label>
+                                    <select id="photo_select_${v}" class="daily-photo-selector" onchange="onSelectDailyPhoto('${v}', this)" style="width: 100%; padding: 6px; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
                                         <option value="">연결 안 함 (선택)</option>
                                     </select>
                                 </div>
@@ -476,13 +478,12 @@
         let currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`; 
         
         let dailyDriverStatus = {}; 
-        let autoDutyByDate = {}; // 날짜별 자동+수동 계산된 당번(당직) 저장소
+        let autoDutyByDate = {};
         let allReservations = [];
         let dailyMemos = {}; 
         let dailyAttachments = {};
         let currentUser = '';
 
-        // 🚀 기본 공휴일 + 사용자가 직접 지정한 휴일(_holidayName) 통합 확인 함수
         function getHolidayName(year, month, day) {
             const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dateStr = `${year}-${mmdd}`;
@@ -692,7 +693,6 @@
             }
         }
 
-        // 🚀 휴일(대체공휴일/임시공휴일 등) 직접 지정 및 해제 함수
         async function handleHoliday() {
             if (!currentDate) return;
             const currentCustom = (dailyDriverStatus[currentDate] && dailyDriverStatus[currentDate]._holidayName) ? dailyDriverStatus[currentDate]._holidayName : '';
@@ -779,7 +779,6 @@
                 recalculateAll(false); 
                 hideLoading();
 
-                // 🚀 최초 로드 시 상하·좌우 동시 중앙 이동(true) 실행!
                 if (isInitialLoad && currentDate) {
                     isInitialLoad = false;
                     selectDate(currentDate, true);
@@ -1000,7 +999,6 @@
             return autoDutyByDate[date] || [];
         }
 
-        // 🚀 2026-10-22(문인식) 기준 당번(당직) 자동 순환 엔진 (오늘 기준 2주 이내 평일 전체)
         function calculateAutoDuty() {
             autoDutyByDate = {};
             if (!loadedStartStr || !loadedEndStr) return;
@@ -1008,12 +1006,10 @@
             const anchorDateStr = '2026-10-22';
             const anchorDriver = '문인식';
 
-            // 오늘 날짜 기준 14일(2주) 뒤 날짜 계산
             const todayObj = new Date();
             const maxDutyObj = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate() + 14);
             const maxDutyStr = `${maxDutyObj.getFullYear()}-${String(maxDutyObj.getMonth() + 1).padStart(2, '0')}-${String(maxDutyObj.getDate()).padStart(2, '0')}`;
 
-            // 1. 2026-10-22 이전 날짜는 기존에 수동 지정된 당직만 그대로 표시
             Object.keys(dailyDriverStatus).forEach(dateStr => {
                 if (dateStr < anchorDateStr) {
                     const statusData = dailyDriverStatus[dateStr] || {};
@@ -1022,8 +1018,7 @@
                 }
             });
 
-            // 2. 2026-10-22부터 순차 계산
-            let cur = new Date(2026, 9, 22); // 2026-10-22
+            let cur = new Date(2026, 9, 22);
             const end = new Date(loadedEndStr > maxDutyStr ? loadedEndStr : maxDutyStr);
             let lastDutyDriver = null;
 
@@ -1036,14 +1031,12 @@
                 const isHoliday = getHolidayName(y, m, d) !== null;
                 const statusData = dailyDriverStatus[dateStr] || {};
 
-                // 주말(파란색/빨간색) 및 공휴일·지정휴일(빨간색)은 당번 제외 (순번 대기)
                 if (dayOfWeek === 0 || dayOfWeek === 6 || isHoliday) {
                     autoDutyByDate[dateStr] = [];
                     cur.setDate(cur.getDate() + 1);
                     continue;
                 }
 
-                // 오늘 기준 2주(14일)를 넘어가는 미래 날짜는 수동 지정만 표시하고 자동 배정 중지
                 if (dateStr > maxDutyStr) {
                     const manualFuture = Object.keys(statusData).filter(k => !k.startsWith('_') && statusData[k] === '당직');
                     autoDutyByDate[dateStr] = manualFuture;
@@ -1051,14 +1044,12 @@
                     continue;
                 }
 
-                // 사용자가 수동으로 당직을 비운 날(_skipDuty)이면 비워두고 순번 대기
                 if (statusData._skipDuty) {
                     autoDutyByDate[dateStr] = [];
                     cur.setDate(cur.getDate() + 1);
                     continue;
                 }
 
-                // 해당 날짜의 유효 운행자 파악 (4일전 취소된 배차는 운행자에서 제외 -> 당번 가능)
                 const dayRes = allReservations.filter(r => (r.dates || []).includes(dateStr));
                 const workingDrivers = new Set();
                 dayRes.forEach(r => {
@@ -1067,7 +1058,6 @@
                     }
                 });
 
-                // 수동으로 지정한 당직자가 있는지 먼저 확인
                 const manualDuty = Object.keys(statusData).filter(drv =>
                     !drv.startsWith('_') &&
                     statusData[drv] === '당직' &&
@@ -1080,7 +1070,6 @@
                     autoDutyByDate[dateStr] = manualDuty;
                     lastDutyDriver = manualDuty[manualDuty.length - 1];
                 } else if (dateStr === anchorDateStr) {
-                    // 10월 22일 기준점: 문인식 우선 배정
                     if (!workingDrivers.has(anchorDriver) && getDriverStatus(dateStr, anchorDriver) !== '휴무') {
                         autoDutyByDate[dateStr] = [anchorDriver];
                         lastDutyDriver = anchorDriver;
@@ -1089,7 +1078,6 @@
                         lastDutyDriver = anchorDriver;
                     }
                 } else {
-                    // 일반 평일: 직전 당번의 다음 순번부터 조건에 맞는 첫 번째 운전원 선발
                     const currentList = getEffectiveDriverList(dateStr);
                     let startIndex = 0;
                     if (lastDutyDriver && currentList.includes(lastDutyDriver)) {
@@ -1099,9 +1087,9 @@
                     let picked = null;
                     for (let i = 0; i < currentList.length; i++) {
                         const candidate = currentList[(startIndex + i) % currentList.length];
-                        if (candidate === '함동한') continue; // 함동한 제외
-                        if (getDriverStatus(dateStr, candidate) === '휴무') continue; // 휴무자 제외
-                        if (workingDrivers.has(candidate)) continue; // 당일 운행자 제외 (4일전 취소자는 포함)
+                        if (candidate === '함동한') continue;
+                        if (getDriverStatus(dateStr, candidate) === '휴무') continue;
+                        if (workingDrivers.has(candidate)) continue;
 
                         picked = candidate;
                         break;
@@ -1111,7 +1099,6 @@
                         autoDutyByDate[dateStr] = [picked];
                         lastDutyDriver = picked;
                     } else {
-                        // 근무 가능한 인원이 0명이면 칸을 비우고 순번(lastDutyDriver)은 그대로 대기
                         autoDutyByDate[dateStr] = [];
                     }
                 }
@@ -1127,7 +1114,6 @@
             if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
 
             if (newStatus === '당직') {
-                // 다른 사람을 수동으로 '당직' 지정 시 기존 수동 당직 해제 및 비우기(_skipDuty) 해제
                 delete dailyDriverStatus[currentDate]._skipDuty;
                 Object.keys(dailyDriverStatus[currentDate]).forEach(k => {
                     if (!k.startsWith('_') && dailyDriverStatus[currentDate][k] === '당직') {
@@ -1136,7 +1122,6 @@
                 });
                 dailyDriverStatus[currentDate][driver] = '당직';
             } else if (oldStatus === '당직' && newStatus === '출근') {
-                // 현재 당직인 사람을 '출근'으로 바꾸면 그날 당직을 비움 처리
                 dailyDriverStatus[currentDate]._skipDuty = true;
                 dailyDriverStatus[currentDate][driver] = '출근';
             } else {
@@ -1249,7 +1234,6 @@
                 }
             });
 
-            // 배차 계산 직후 당번(당직) 자동 순번 계산 실행
             calculateAutoDuty();
 
             if (shouldSaveToDB) {
@@ -1390,7 +1374,6 @@
             }
         }
 
-        // 달력 상단 연월 제목 클릭 시 오늘 날짜로 상하·좌우 즉시 이동
         function goToToday() {
             const now = new Date();
             currentYear = now.getFullYear();
@@ -1492,7 +1475,6 @@
             const dutyDrivers = getDutyDriversForDate(date);
 
             let statusHTML = '';
-            // 휴무자 바로 위 (휴무자가 없으면 칸 맨 밑)에 당직 표시
             if (dutyDrivers.length > 0) {
                 statusHTML += `<div class="cal-status duty"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
             }
@@ -1880,20 +1862,23 @@
                 
                 if (files.length > 0) {
                     files.forEach((f, idx) => {
+                        const routeHint = (f.start || f.end) ? `<div style="font-size:0.75rem; color:#28a745; margin-top:2px;">🔍 ${f.start || '?'} ➔ ${f.end || '?'}</div>` : '';
                         attachHtml += `
                             <li style="margin-bottom: 5px; display: flex; gap: 5px; align-items: center;">
                                 <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #0056b3; background: #f0f7ff; border: 1px solid #b8daff; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
-                                    📎 ${f.name}
+                                    📎 ${f.name}${routeHint}
                                 </a>
                                 <button onclick="deleteDailyFile('${date}', ${idx})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">삭제</button>
                             </li>`;
-                        optionsHtml += `<option value="${f.url}">${f.name}</option>`;
+                        optionsHtml += `<option value="${f.url}">${f.name}${(f.start || f.end) ? ` (${f.start || ''}➔${f.end || ''})` : ''}</option>`;
                     });
                 }
                 attachmentUl.innerHTML = attachHtml;
 
                 document.querySelectorAll('.daily-photo-selector').forEach(select => {
+                    const prevVal = select.value;
                     select.innerHTML = optionsHtml;
+                    if (prevVal) select.value = prevVal;
                 });
             }
         }
@@ -1923,7 +1908,6 @@
             });
         }
 
-        // 🚀 scrollVertical이 true(최초 접속/오늘 이동)면 정비창처럼 상하·좌우 동시 중앙 이동!
         function selectDate(dateStr, scrollVertical = false) {
             currentDate = dateStr;
             sessionStorage.setItem('lastSelectedDate', dateStr);
@@ -2016,6 +2000,268 @@
             });
         })();
 
+        // 🚀 [완성형] 성묘/시티투어(일일운행일보) 및 이용신청서 표 구조를 자동 판별해 옆 칸만 읽어오는 함수
+        async function extractRouteFromImage(file) {
+            if (!file || !file.type.startsWith('image/') || typeof Tesseract === 'undefined') {
+                return { start: '', end: '' };
+            }
+
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = async () => {
+                        try {
+                            const W = img.width;
+                            const H = img.height;
+                            const srcCanvas = document.createElement('canvas');
+                            srcCanvas.width = W;
+                            srcCanvas.height = H;
+                            const srcCtx = srcCanvas.getContext('2d');
+                            srcCtx.drawImage(img, 0, 0);
+                            const imgData = srcCtx.getImageData(0, 0, W, H).data;
+
+                            // 표 테두리 선(검은색/회색) 픽셀 감지
+                            const isBorderPixel = (x, y) => {
+                                if (x < 0 || x >= W || y < 0 || y >= H) return false;
+                                const idx = (y * W + x) * 4;
+                                return Math.max(imgData[idx], imgData[idx + 1], imgData[idx + 2]) < 225;
+                            };
+
+                            // 1. 상단 영역(5% ~ 42%)에서 표의 가로선(Horizontal Lines) Y좌표 찾기
+                            const scanXStart = Math.floor(W * 0.06);
+                            const scanXEnd = Math.floor(W * 0.46);
+                            const scanWidth = scanXEnd - scanXStart;
+                            const rawHLines = [];
+
+                            for (let y = Math.floor(H * 0.05); y <= Math.floor(H * 0.42); y++) {
+                                let lineCount = 0;
+                                for (let x = scanXStart; x <= scanXEnd; x++) {
+                                    if (isBorderPixel(x, y) || isBorderPixel(x, y - 1) || isBorderPixel(x, y + 1)) {
+                                        lineCount++;
+                                    }
+                                }
+                                if (lineCount / scanWidth >= 0.78) {
+                                    rawHLines.push(y);
+                                }
+                            }
+
+                            const hLines = [];
+                            rawHLines.forEach(y => {
+                                if (hLines.length === 0 || y - hLines[hLines.length - 1].last > 5) {
+                                    hLines.push({ sum: y, count: 1, last: y });
+                                } else {
+                                    const cur = hLines[hLines.length - 1];
+                                    cur.sum += y;
+                                    cur.count++;
+                                    cur.last = y;
+                                }
+                            });
+                            const yLines = hLines.map(g => Math.round(g.sum / g.count));
+
+                            // 특정 X구간에서 위아래 가로선을 잇는 세로 테두리선 X좌표 찾기
+                            const findVerticalLine = (xMin, xMax, yTop, yBot, ratio = 0.75) => {
+                                const h = Math.max(1, yBot - yTop - 2);
+                                const q = Math.max(2, Math.floor(h * 0.25));
+                                for (let x = xMin; x <= xMax; x++) {
+                                    let total = 0, topQ = 0, botQ = 0;
+                                    for (let y = yTop + 1; y <= yBot - 1; y++) {
+                                        if (isBorderPixel(x, y) || isBorderPixel(x - 1, y) || isBorderPixel(x + 1, y)) {
+                                            total++;
+                                            if (y <= yTop + q) topQ++;
+                                            if (y >= yBot - q) botQ++;
+                                        }
+                                    }
+                                    if (total / h >= ratio && topQ / q >= 0.65 && botQ / q >= 0.65) {
+                                        return x;
+                                    }
+                                }
+                                return -1;
+                            };
+
+                            // 2. 각 행의 세로 칸막이 위치 분석 (여백이 좁은 성묘 양식도 잡히도록 왼쪽 기준 제한 제거)
+                            const candidateRows = [];
+                            for (let i = 0; i < yLines.length - 1; i++) {
+                                const yTop = yLines[i];
+                                const yBot = yLines[i + 1];
+                                const rowH = yBot - yTop;
+
+                                if (rowH < H * 0.015 || rowH > H * 0.075) continue;
+
+                                // 왼쪽 제목칸('출발지', '목적지')의 오른쪽 세로 경계선 (12% ~ 24% 사이)
+                                const xLabelRight = findVerticalLine(Math.floor(W * 0.12), Math.floor(W * 0.24), yTop, yBot, 0.75);
+                                if (xLabelRight === -1) continue;
+
+                                // 성명/탑승인원처럼 앞쪽(22% ~ 42%)에 쪼개진 칸막이가 있는지 확인
+                                const xEarlyDiv = findVerticalLine(xLabelRight + Math.floor(W * 0.04), Math.floor(W * 0.42), yTop, yBot, 0.75);
+                                // 중간(44% ~ 62%)에 칸막이('운행시간/연락처' 또는 '왕복/이동거리')가 있는지 확인
+                                const xMidDiv = findVerticalLine(Math.floor(W * 0.44), Math.floor(W * 0.62), yTop, yBot, 0.75);
+                                // 표 맨 오른쪽 끝 테두리(88% ~ 99%)
+                                let xOuterRight = findVerticalLine(Math.floor(W * 0.88), Math.floor(W * 0.99), yTop, yBot, 0.70);
+                                if (xOuterRight === -1) xOuterRight = Math.floor(W * 0.95);
+
+                                candidateRows.push({
+                                    yTop, yBot,
+                                    xLabelRight,
+                                    xEarlyDiv,
+                                    xMidDiv,
+                                    xOuterRight
+                                });
+                            }
+
+                            // 3. 서로 붙어 있고 제목칸 세로선(xLabelRight)이 일직선으로 정렬된 '첫 번째 본문 표'만 묶기 (하단 차고지 표 제외)
+                            const groups = [];
+                            candidateRows.forEach(r => {
+                                if (groups.length === 0) {
+                                    groups.push([r]);
+                                } else {
+                                    const curGroup = groups[groups.length - 1];
+                                    const prev = curGroup[curGroup.length - 1];
+                                    if (r.yTop - prev.yBot <= 10 && Math.abs(r.xLabelRight - prev.xLabelRight) <= 8) {
+                                        curGroup.push(r);
+                                    } else {
+                                        groups.push([r]);
+                                    }
+                                }
+                            });
+
+                            const mainTable = groups.find(g => g.length >= 4) || candidateRows;
+                            if (mainTable.length < 2) {
+                                resolve({ start: '', end: '' });
+                                return;
+                            }
+
+                            // 4. 양식별 고유 칸 모양으로 '출발지' 행과 '목적지' 행 정확히 집어내기
+                            let startRow = null;
+                            let endRow = null;
+
+                            // [패턴 A] 일일운행 일보 (성묘지원버스 / 시티투어):
+                            // 위쪽(신청인)은 중간 칸막이(xMidDiv)가 있고, 바로 아래 2줄(출발지, 목적지)은 끝까지 뚫린 통칸!
+                            for (let i = 1; i < mainTable.length - 1; i++) {
+                                const prev = mainTable[i - 1];
+                                const cur = mainTable[i];
+                                const next = mainTable[i + 1];
+
+                                if (prev.xMidDiv !== -1 &&
+                                    cur.xEarlyDiv === -1 && cur.xMidDiv === -1 &&
+                                    next.xEarlyDiv === -1 && next.xMidDiv === -1) {
+                                    startRow = { ...cur, xLeft: cur.xLabelRight, xRight: cur.xOuterRight };
+                                    endRow = { ...next, xLeft: next.xLabelRight, xRight: next.xOuterRight };
+                                    break;
+                                }
+                            }
+
+                            // [패턴 B] 이용신청서 (버스 / 쏠라티):
+                            // 위쪽(이용목적)은 통칸이고, 바로 아래 2줄(출발지, 목적지)은 중간(54% 지점)에 '왕복/이동거리' 칸막이(xMidDiv)가 있음!
+                            if (!startRow) {
+                                for (let i = 1; i < mainTable.length - 1; i++) {
+                                    const prev = mainTable[i - 1];
+                                    const cur = mainTable[i];
+                                    const next = mainTable[i + 1];
+
+                                    if (prev.xMidDiv === -1 &&
+                                        cur.xEarlyDiv === -1 && cur.xMidDiv !== -1 &&
+                                        next.xEarlyDiv === -1 && next.xMidDiv !== -1) {
+                                        const rightLimit = Math.min(cur.xMidDiv, next.xMidDiv);
+                                        startRow = { ...cur, xLeft: cur.xLabelRight, xRight: rightLimit };
+                                        endRow = { ...next, xLeft: next.xLabelRight, xRight: rightLimit };
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // 혹시라도 예외 양식일 경우 기본 3번째, 4번째 행 사용
+                            if (!startRow) {
+                                const sIdx = mainTable.length >= 4 ? 2 : 0;
+                                const eIdx = Math.min(mainTable.length - 1, sIdx + 1);
+                                startRow = { ...mainTable[sIdx], xLeft: mainTable[sIdx].xLabelRight, xRight: mainTable[sIdx].xMidDiv !== -1 ? mainTable[sIdx].xMidDiv : mainTable[sIdx].xOuterRight };
+                                endRow = { ...mainTable[eIdx], xLeft: mainTable[eIdx].xLabelRight, xRight: mainTable[eIdx].xMidDiv !== -1 ? mainTable[eIdx].xMidDiv : mainTable[eIdx].xOuterRight };
+                            }
+
+                            // 5. 찾아낸 '출발지 옆 칸'과 '목적지 옆 칸'만 테두리 없이 오려내기
+                            const cropValueCell = (row) => {
+                                const cx = row.xLeft + 6;
+                                const cy = row.yTop + 4;
+                                const cw = Math.max(10, row.xRight - row.xLeft - 12);
+                                const ch = Math.max(10, row.yBot - row.yTop - 8);
+
+                                const scale = 2.5;
+                                const margin = 24;
+                                const outCanvas = document.createElement('canvas');
+                                outCanvas.width = Math.floor(cw * scale) + margin * 2;
+                                outCanvas.height = Math.floor(ch * scale) + margin * 2;
+                                const outCtx = outCanvas.getContext('2d');
+
+                                outCtx.fillStyle = '#ffffff';
+                                outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+                                outCtx.imageSmoothingEnabled = true;
+                                outCtx.imageSmoothingQuality = 'high';
+                                outCtx.drawImage(img, cx, cy, cw, ch, margin, margin, Math.floor(cw * scale), Math.floor(ch * scale));
+
+                                const cData = outCtx.getImageData(0, 0, outCanvas.width, outCanvas.height);
+                                const d = cData.data;
+                                for (let i = 0; i < d.length; i += 4) {
+                                    const m = Math.min(d[i], d[i + 1], d[i + 2]);
+                                    const val = m >= 205 ? 255 : Math.round((m / 205) * 220);
+                                    d[i] = d[i + 1] = d[i + 2] = val;
+                                    d[i + 3] = 255;
+                                }
+                                outCtx.putImageData(cData, 0, 0);
+                                return outCanvas;
+                            };
+
+                            const startCanvas = cropValueCell(startRow);
+                            const endCanvas = cropValueCell(endRow);
+
+                            // 6. 잘라낸 두 칸을 각각 인식
+                            const [startRes, endRes] = await Promise.all([
+                                Tesseract.recognize(startCanvas, 'kor'),
+                                Tesseract.recognize(endCanvas, 'kor')
+                            ]);
+
+                            const cleanText = (txt) => {
+                                return (txt || '')
+                                    .replace(/[\r\n]+/g, ' ')
+                                    .replace(/(왕\s*복|편\s*도|이\s*동\s*거\s*리|출\s*발\s*시\s*간|도\s*착\s*시\s*간|인\s*터\s*넷).*$/g, '')
+                                    .replace(/[|｜\[\]{}()<>~`'"“”‘’_]/g, ' ')
+                                    .replace(/\s+/g, ' ')
+                                    .trim();
+                            };
+
+                            resolve({
+                                start: cleanText(startRes.data && startRes.data.text),
+                                end: cleanText(endRes.data && endRes.data.text)
+                            });
+                        } catch (err) {
+                            console.warn('신청서 OCR 분석 실패:', err);
+                            resolve({ start: '', end: '' });
+                        }
+                    };
+                    img.onerror = () => resolve({ start: '', end: '' });
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => resolve({ start: '', end: '' });
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 🚀 차량 예약 폼에서 신청서를 선택하면 출발지/도착지 입력칸에 즉시 자동 입력
+        function onSelectDailyPhoto(vehicleName, selectEl) {
+            const selectedUrl = selectEl.value;
+            if (!selectedUrl || !currentDate) return;
+
+            const files = dailyAttachments[currentDate] || [];
+            const matched = files.find(f => f.url === selectedUrl);
+            if (!matched) return;
+
+            const startInput = document.getElementById(`start_${vehicleName}`);
+            const endInput = document.getElementById(`end_${vehicleName}`);
+
+            if (matched.start && startInput) startInput.value = matched.start;
+            if (matched.end && endInput) endInput.value = matched.end;
+        }
+
+        // 🚀 날짜별 신청서 업로드 함수 (업로드 + 출발/도착지 자동 추출 동시 수행)
         async function uploadDailyFile() {
             if (!currentDate) return alert('먼저 달력에서 날짜를 선택해주세요!');
             const fileInput = document.getElementById('daily-upload-file');
@@ -2024,25 +2270,40 @@
 
             const status = document.getElementById('daily-upload-status');
             status.style.display = 'block';
-            status.innerText = '🚀 파일을 서버로 올리는 중입니다...';
+            status.innerText = '🚀 신청서 업로드 및 출발/도착지 자동 인식 중...';
 
             try {
+                // 1. 스토리지 업로드와 이미지 글자 인식(OCR)을 동시에 진행
                 const storageRef = firebase.storage().ref();
                 const fileRef = storageRef.child(`daily_docs/${currentDate}_${Date.now()}_${file.name}`);
-                await fileRef.put(file);
+
+                const [uploadSnap, routeInfo] = await Promise.all([
+                    fileRef.put(file),
+                    extractRouteFromImage(file)
+                ]);
                 const url = await fileRef.getDownloadURL();
 
+                // 2. 파이어스토어 DB에 파일 정보 + 추출된 출발지/도착지 함께 저장
                 const docRef = db.collection('daily_attachments').doc(currentDate);
                 const doc = await docRef.get();
                 let files = [];
                 if (doc.exists) { files = doc.data().files || []; }
                 
-                files.push({ name: file.name, url: url });
+                files.push({
+                    name: file.name,
+                    url: url,
+                    start: routeInfo.start || '',
+                    end: routeInfo.end || ''
+                });
                 await docRef.set({ files: files });
 
-                status.innerText = '✅ 업로드 완료!';
+                if (routeInfo.start || routeInfo.end) {
+                    status.innerText = `✅ 인식 완료! [${routeInfo.start || '미확인'} ➔ ${routeInfo.end || '미확인'}]`;
+                } else {
+                    status.innerText = '✅ 업로드 완료!';
+                }
                 fileInput.value = '';
-                setTimeout(() => status.style.display = 'none', 2000);
+                setTimeout(() => status.style.display = 'none', 3500);
             } catch (error) {
                 console.error(error);
                 status.innerText = '❌ 업로드 실패. 다시 시도해주세요.';
