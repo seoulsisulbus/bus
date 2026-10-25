@@ -1862,16 +1862,16 @@
                 
                 if (files.length > 0) {
                     files.forEach((f, idx) => {
-                        const orgBadge = f.org ? ` <span style="color:#0056b3;">[단체명: ${f.org}]</span>` : '';
-                        const routeHint = (f.start || f.end || f.org) ? `<div style="font-size:0.75rem; color:#28a745; margin-top:2px;">🔍 ${f.start || '?'} ➔ ${f.end || '?'}${orgBadge}</div>` : '';
+                        // 🚀 신청서 목록에는 파일 이름(예: 10-28-13.png)만 깔끔하게 한 줄로 표시!
                         attachHtml += `
                             <li style="margin-bottom: 5px; display: flex; gap: 5px; align-items: center;">
                                 <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #0056b3; background: #f0f7ff; border: 1px solid #b8daff; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
-                                    📎 ${f.name}${routeHint}
+                                    📎 ${f.name}
                                 </a>
                                 <button onclick="deleteDailyFile('${date}', ${idx})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">삭제</button>
                             </li>`;
-                        optionsHtml += `<option value="${f.url}">${f.name}${(f.start || f.end) ? ` (${f.start || ''}➔${f.end || ''}${f.org ? ' / ' + f.org : ''})` : ''}</option>`;
+                        // 🚀 드롭다운에도 파일 이름만 표시 (선택 시 숨겨둔 출발지/도착지/단체명이 각 칸에 자동 입력됨)
+                        optionsHtml += `<option value="${f.url}">${f.name}</option>`;
                     });
                 }
                 attachmentUl.innerHTML = attachHtml;
