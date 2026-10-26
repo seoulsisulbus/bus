@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
-    <title>배차 및 운행 집계 (통합)</title>
+    <title>배차 및 정비 집계 (통합)</title>
 
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -13,19 +13,23 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f6f9; color: #333; letter-spacing: -0.3px; padding-bottom: 40px; }
 
-        .top-bar { max-width: 1400px; margin: 15px auto 0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .top-bar { max-width: 1400px; margin: 15px auto 0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
         .top-bar h2 { font-size: 1.3rem; color: #2c3e50; font-weight: 800; }
-        .btn-back { background: #007bff; color: #fff; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-back { background: #007bff; color: #fff; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
         .btn-back:hover { background: #0056b3; }
 
         .container { max-width: 1400px; margin: 15px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
         .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
 
-        .month-selector { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid #007bff; }
-        .month-title { font-size: 1.35rem; font-weight: 800; color: #007bff; cursor: pointer; }
-        .month-btns { display: flex; gap: 6px; align-items: center; }
-        .month-btns button { padding: 6px 14px; font-size: 1rem; font-weight: 700; cursor: pointer; border: 1px solid #ced4da; background: #fff; border-radius: 6px; font-family: inherit; }
-        .month-btns button:hover { background: #f1f3f5; }
+        .period-control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #007bff; flex-wrap: wrap; gap: 10px; }
+        .mode-switch { display: flex; gap: 6px; background: #eef2f7; padding: 4px; border-radius: 8px; }
+        .mode-btn { padding: 7px 14px; border: none; border-radius: 6px; font-weight: 800; font-size: 0.9rem; cursor: pointer; background: transparent; color: #555; font-family: inherit; transition: 0.15s; }
+        .mode-btn.active { background: #007bff; color: #fff; box-shadow: 0 2px 4px rgba(0,123,255,0.25); }
+
+        .period-title { font-size: 1.35rem; font-weight: 800; color: #007bff; cursor: pointer; text-align: center; }
+        .period-btns { display: flex; gap: 6px; align-items: center; }
+        .period-btns button { padding: 6px 12px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: 1px solid #ced4da; background: #fff; border-radius: 6px; font-family: inherit; }
+        .period-btns button:hover { background: #f1f3f5; }
 
         .section-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 12px; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .section-title span.sub { font-size: 0.8rem; color: #007bff; font-weight: 600; }
@@ -49,8 +53,18 @@
 
         #driver-detail-box { display: none; margin-top: 15px; background: #f8f9fa; border: 2px solid #007bff; border-radius: 8px; padding: 15px; }
         #driver-detail-box h4 { color: #007bff; margin-bottom: 10px; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; }
-        .detail-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+        .detail-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; max-height: 360px; overflow-y: auto; }
         .detail-list li { background: #fff; border: 1px solid #dee2e6; padding: 10px; border-radius: 6px; font-size: 0.88rem; line-height: 1.5; }
+
+        /* 정비 집계 전용 스타일 */
+        .maint-summary-boxes { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .maint-badge-card { flex: 1; min-width: 140px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; text-align: center; }
+        .maint-badge-card .label { font-size: 0.85rem; color: #666; font-weight: 700; margin-bottom: 4px; }
+        .maint-badge-card .count { font-size: 1.3rem; font-weight: 900; }
+        .type-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 800; color: #fff; }
+        .type-tag.repair { background: #dc3545; }
+        .type-tag.prev { background: #007bff; }
+        .type-tag.insp { background: #28a745; }
 
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: 700; color: #007bff; }
 
@@ -58,6 +72,9 @@
             .top-bar { padding: 10px 12px; }
             .container { padding: 0 10px; gap: 12px; }
             .card { padding: 14px; }
+            .period-control-bar { flex-direction: column; align-items: stretch; }
+            .mode-switch { justify-content: center; }
+            .period-btns { justify-content: center; }
             table.stats-table { font-size: 0.82rem; }
             table.stats-table th, table.stats-table td { padding: 8px 4px; }
         }
@@ -67,28 +84,35 @@
     <div id="loading-overlay"><div id="loading-text">집계 데이터 계산 중...</div></div>
 
     <div class="top-bar">
-        <h2>📊 월간 배차 및 정산 집계</h2>
-        <div style="display: flex; gap: 6px;">
+        <h2>📊 배차 · 운행 · 정비 통합 집계</h2>
+        <div style="display: flex; gap: 6px; align-items: center;">
+            <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">🔧 정비창</button>
             <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">PC버전</button>
-            <button class="btn-back" onclick="location.href='index.html'">📅 배차판 돌아가기</button>
+            <button class="btn-back" onclick="location.href='index.html'">📅 배차판</button>
         </div>
     </div>
 
     <div class="container">
-        <!-- 운전원별 집계 카드 -->
+        <!-- 1. 상단 기간(월별/년별) 제어 및 운전원별 집계 카드 -->
         <div class="card">
-            <div class="month-selector">
-                <span class="month-title" id="month-display" onclick="goToThisMonth()" title="클릭하면 이번 달로 이동합니다">2026년 10월 집계</span>
-                <div class="month-btns">
-                    <button onclick="changeMonth(-1)">＜ 이전 달</button>
-                    <button onclick="goToThisMonth()" style="background:#e8f0fe; color:#0056b3; border-color:#b6d4fe;">이번 달</button>
-                    <button onclick="changeMonth(1)">다음 달 ＞</button>
+            <div class="period-control-bar">
+                <div class="mode-switch">
+                    <button id="mode-month-btn" class="mode-btn active" onclick="setStatsMode('month')">📅 월별 보기</button>
+                    <button id="mode-year-btn" class="mode-btn" onclick="setStatsMode('year')">📊 년별(연간) 보기</button>
+                </div>
+
+                <span class="period-title" id="period-display" onclick="goToCurrentPeriod()" title="클릭하면 현재 달/연도로 이동합니다">2026년 10월 집계</span>
+
+                <div class="period-btns">
+                    <button id="btn-prev-period" onclick="changePeriod(-1)">＜ 이전 달</button>
+                    <button id="btn-curr-period" onclick="goToCurrentPeriod()" style="background:#e8f0fe; color:#0056b3; border-color:#b6d4fe;">이번 달</button>
+                    <button id="btn-next-period" onclick="changePeriod(1)">다음 달 ＞</button>
                 </div>
             </div>
 
             <div class="section-title">
-                <span>👤 운전원별 월간 배차 및 정산 현황</span>
-                <span class="sub">💡 운전원 이름을 누르면 아래에 상세 운행 내역이 표시됩니다. (단위: 일수基準)</span>
+                <span>👤 운전원별 배차 및 정산 현황</span>
+                <span class="sub">💡 운전원 이름을 누르면 아래에 상세 운행 내역이 펼쳐집니다. (단위: 일수 기준)</span>
             </div>
 
             <div class="table-wrap">
@@ -125,10 +149,11 @@
             </div>
         </div>
 
-        <!-- 차량별 집계 카드 -->
+        <!-- 2. 차량별 운행 집계 카드 -->
         <div class="card">
             <div class="section-title">
-                <span>🚌 차량별 월간 운행 및 거리(km) 집계</span>
+                <span>🚌 차량별 운행 일수 및 거리(km) 집계</span>
+                <span class="sub" id="veh-period-sub"></span>
             </div>
             <div class="table-wrap">
                 <table class="stats-table" style="min-width: 600px;">
@@ -142,11 +167,57 @@
                             <th>시티/기타</th>
                             <th>실운행(일)</th>
                             <th>4일전취소</th>
-                            <th>누적 거리(km)</th>
+                            <th>예약 거리(km)</th>
                         </tr>
                     </thead>
                     <tbody id="vehicle-stats-tbody"></tbody>
                     <tfoot id="vehicle-stats-tfoot"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. 차량 정비 및 정기검사 집계 카드 (vehicle_logs 연동) -->
+        <div class="card">
+            <div class="section-title" style="border-bottom: 2px solid #28a745; padding-bottom: 10px;">
+                <span>🔧 차량별 주요 정비 및 정기검사 집계</span>
+                <span class="sub" id="maint-period-sub" style="color:#155724;">고장수리 · 예방정비 · 정기검사 이력</span>
+            </div>
+
+            <!-- 정비 건수 요약 배지 -->
+            <div class="maint-summary-boxes">
+                <div class="maint-badge-card">
+                    <div class="label">총 정비·검사 건수</div>
+                    <div class="count" id="maint-cnt-total" style="color:#333;">0건</div>
+                </div>
+                <div class="maint-badge-card" style="background:#fff5f5; border-color:#f5c6cb;">
+                    <div class="label" style="color:#dc3545;">🚨 고장수리</div>
+                    <div class="count" id="maint-cnt-repair" style="color:#dc3545;">0건</div>
+                </div>
+                <div class="maint-badge-card" style="background:#f0f7ff; border-color:#b8daff;">
+                    <div class="label" style="color:#0056b3;">🛠️ 예방정비</div>
+                    <div class="count" id="maint-cnt-prev" style="color:#0056b3;">0건</div>
+                </div>
+                <div class="maint-badge-card" style="background:#f0fdf4; border-color:#c3e6cb;">
+                    <div class="label" style="color:#155724;">✅ 정기검사</div>
+                    <div class="count" id="maint-cnt-insp" style="color:#155724;">0건</div>
+                </div>
+            </div>
+
+            <!-- 정비 상세 내역 표 -->
+            <div class="table-wrap">
+                <table class="stats-table" style="min-width: 720px;">
+                    <thead>
+                        <tr>
+                            <th style="width:90px;">차량번호</th>
+                            <th style="width:105px;">날짜</th>
+                            <th style="width:95px;">구분</th>
+                            <th style="width:110px;">누적 KM</th>
+                            <th>항목 / 검사결과</th>
+                            <th>조치(부품) / 다음검사일</th>
+                            <th style="width:140px;">정비 / 검사소</th>
+                        </tr>
+                    </thead>
+                    <tbody id="maint-stats-tbody"></tbody>
                 </table>
             </div>
         </div>
@@ -186,15 +257,18 @@
         let dailyDriverStatus = {};
         let autoDutyByDate = {};
         let allReservations = [];
+        let allVehicleLogs = []; // vehicle_logs 정비 데이터 저장소
 
         const _now = new Date();
         let currentYear = _now.getFullYear();
         let currentMonth = _now.getMonth();
+        let statsMode = 'month'; // 'month'(월별) 또는 'year'(년별)
         let currentUser = localStorage.getItem('loggedInUser') || '';
 
         let loadedStartStr = '';
         let loadedEndStr = '';
         let unsubRes = null;
+        let unsubLogs = null;
         let unsubStatus = null;
         let unsubMod = null;
 
@@ -426,7 +500,6 @@
 
                         for (let d of res.dates) {
                             if (getDriverStatus(d, candidate) === '휴무') {
-                                // 🚀 4일전 취소된 배차의 운전원이 취소로 인해 휴무를 쓴 경우 건너뛰지 않고 유지!
                                 if (res.isCanceled && res.canceledDrivers && res.canceledDrivers.includes(candidate)) {
                                     continue;
                                 }
@@ -457,18 +530,34 @@
             renderStats();
         }
 
-        function loadFromFirebase() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-
-            if (!loadedStartStr || !loadedEndStr) {
+        function ensureRangeForCurrentView() {
+            if (statsMode === 'year') {
+                const reqStart = `${currentYear - 1}-12-01`;
+                const reqEnd = `${currentYear}-12-31`;
+                let changed = false;
+                if (!loadedStartStr || reqStart < loadedStartStr) { loadedStartStr = reqStart; changed = true; }
+                if (!loadedEndStr || reqEnd > loadedEndStr) { loadedEndStr = reqEnd; changed = true; }
+                return changed;
+            } else {
                 const startDate = new Date(currentYear, currentMonth - 1, 1);
                 const endDate = new Date(currentYear, currentMonth + 2, 0);
-                loadedStartStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
-                loadedEndStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+                const reqStart = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+                const reqEnd = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+                let changed = false;
+                if (!loadedStartStr || reqStart < loadedStartStr) { loadedStartStr = reqStart; changed = true; }
+                if (!loadedEndStr || reqEnd > loadedEndStr) { loadedEndStr = reqEnd; changed = true; }
+                return changed;
             }
+        }
+
+        function loadFromFirebase() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            ensureRangeForCurrentView();
 
             if (unsubRes) unsubRes();
+            if (unsubLogs) unsubLogs();
 
+            // 1. 배차 예약 데이터 수신
             unsubRes = db.collection('reservations')
                          .where("startDate", ">=", loadedStartStr)
                          .where("startDate", "<=", loadedEndStr)
@@ -483,6 +572,21 @@
             }, err => {
                 console.error(err);
                 document.getElementById('loading-overlay').style.display = 'none';
+            });
+
+            // 2. 차량 정비/검사(vehicle_logs) 데이터 수신
+            unsubLogs = db.collection('vehicle_logs')
+                          .where("date", ">=", loadedStartStr)
+                          .where("date", "<=", loadedEndStr)
+                          .onSnapshot(snapshot => {
+                allVehicleLogs = [];
+                snapshot.forEach(doc => {
+                    const d = doc.data(); d.id = doc.id;
+                    allVehicleLogs.push(d);
+                });
+                renderMaintenanceStats();
+            }, err => {
+                console.error("정비 데이터 수신 오류:", err);
             });
 
             if (!unsubStatus) {
@@ -506,34 +610,57 @@
             }
         }
 
-        function changeMonth(offset) {
-            currentMonth += offset;
-            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-            else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        // 🚀 월별 보기 / 년별(연간) 보기 전환 함수
+        function setStatsMode(mode) {
+            statsMode = mode;
+            document.getElementById('mode-month-btn').classList.toggle('active', mode === 'month');
+            document.getElementById('mode-year-btn').classList.toggle('active', mode === 'year');
+
+            document.getElementById('btn-prev-period').innerText = mode === 'year' ? '＜ 이전 해' : '＜ 이전 달';
+            document.getElementById('btn-curr-period').innerText = mode === 'year' ? '올해' : '이번 달';
+            document.getElementById('btn-next-period').innerText = mode === 'year' ? '다음 해 ＞' : '다음 달 ＞';
 
             document.getElementById('driver-detail-box').style.display = 'none';
 
-            const viewStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const viewEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-
-            if (viewStart < loadedStartStr) {
-                loadedStartStr = viewStart;
-                loadFromFirebase();
-            } else if (viewEnd > loadedEndStr) {
-                loadedEndStr = viewEnd;
+            if (ensureRangeForCurrentView()) {
                 loadFromFirebase();
             } else {
                 renderStats();
+                renderMaintenanceStats();
             }
         }
 
-        function goToThisMonth() {
+        function changePeriod(offset) {
+            if (statsMode === 'year') {
+                currentYear += offset;
+            } else {
+                currentMonth += offset;
+                if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+                else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            }
+
+            document.getElementById('driver-detail-box').style.display = 'none';
+
+            if (ensureRangeForCurrentView()) {
+                loadFromFirebase();
+            } else {
+                renderStats();
+                renderMaintenanceStats();
+            }
+        }
+
+        function goToCurrentPeriod() {
             const now = new Date();
             currentYear = now.getFullYear();
             currentMonth = now.getMonth();
             document.getElementById('driver-detail-box').style.display = 'none';
-            renderStats();
+
+            if (ensureRangeForCurrentView()) {
+                loadFromFirebase();
+            } else {
+                renderStats();
+                renderMaintenanceStats();
+            }
         }
 
         function formatCell(val, activeClass = 'num-active') {
@@ -541,16 +668,27 @@
         }
 
         function renderStats() {
-            const ymPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-            document.getElementById('month-display').innerText = `${currentYear}년 ${currentMonth + 1}월 집계`;
+            const isYear = (statsMode === 'year');
+            const prefix = isYear
+                ? `${currentYear}-`
+                : `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
-            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const monthDrivers = getEffectiveDriverList(`${ymPrefix}-${String(lastDay).padStart(2, '0')}`);
-            // 명단에 없더라도 기본 명단에 있는 운전원 포함
-            defaultDrivers.forEach(d => { if (!monthDrivers.includes(d)) monthDrivers.push(d); });
+            const periodTitle = isYear
+                ? `${currentYear}년 연간 총집계 (1월~12월)`
+                : `${currentYear}년 ${currentMonth + 1}월 집계`;
+
+            document.getElementById('period-display').innerText = periodTitle;
+            document.getElementById('veh-period-sub').innerText = periodTitle;
+
+            const refEndDate = isYear
+                ? `${currentYear}-12-31`
+                : `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(new Date(currentYear, currentMonth + 1, 0).getDate()).padStart(2, '0')}`;
+
+            const targetDrivers = getEffectiveDriverList(refEndDate);
+            defaultDrivers.forEach(d => { if (!targetDrivers.includes(d)) targetDrivers.push(d); });
 
             const driverStats = {};
-            monthDrivers.forEach(d => {
+            targetDrivers.forEach(d => {
                 driverStats[d] = {
                     pub: 0, night1: 0, night2: 0, grave: 0, city: 0, etc: 0,
                     totalActive: 0, canceled: 0, duty: 0, off: 0,
@@ -558,21 +696,25 @@
                 };
             });
 
-            // 1. 해당 월의 날짜별 당직 및 휴무 집계
-            for (let day = 1; day <= lastDay; day++) {
-                const dateStr = `${ymPrefix}-${String(day).padStart(2, '0')}`;
-                const dutyList = autoDutyByDate[dateStr] || [];
-                dutyList.forEach(drv => {
-                    if (driverStats[drv]) driverStats[drv].duty++;
-                });
+            // 1. 해당 기간(월 또는 연도)의 당직 및 휴무 집계
+            Object.keys(autoDutyByDate).forEach(dateStr => {
+                if (dateStr.startsWith(prefix)) {
+                    (autoDutyByDate[dateStr] || []).forEach(drv => {
+                        if (driverStats[drv]) driverStats[drv].duty++;
+                    });
+                }
+            });
 
-                const statusData = dailyDriverStatus[dateStr] || {};
-                Object.keys(statusData).forEach(drv => {
-                    if (!drv.startsWith('_') && statusData[drv] === '휴무' && driverStats[drv]) {
-                        driverStats[drv].off++;
-                    }
-                });
-            }
+            Object.keys(dailyDriverStatus).forEach(dateStr => {
+                if (dateStr.startsWith(prefix)) {
+                    const statusData = dailyDriverStatus[dateStr] || {};
+                    Object.keys(statusData).forEach(drv => {
+                        if (!drv.startsWith('_') && statusData[drv] === '휴무' && driverStats[drv]) {
+                            driverStats[drv].off++;
+                        }
+                    });
+                }
+            });
 
             // 2. 차량별 집계 초기화
             const vehStats = {};
@@ -582,51 +724,49 @@
 
             // 3. 예약 내역 순회하며 운전원별 & 차량별 집계
             allReservations.forEach(r => {
-                const monthDates = (r.dates || []).filter(d => d.startsWith(ymPrefix));
-                if (monthDates.length === 0) return;
+                const matchedDates = (r.dates || []).filter(d => d.startsWith(prefix));
+                if (matchedDates.length === 0) return;
 
-                const daysInMonth = monthDates.length;
+                const daysCount = matchedDates.length;
                 const t = r.type || '';
                 const v = r.vehicle;
 
-                // 차량별 집계
                 if (vehStats[v]) {
                     if (r.isCanceled) {
-                        vehStats[v].canceled += daysInMonth;
+                        vehStats[v].canceled += daysCount;
                     } else {
-                        vehStats[v].totalActive += daysInMonth;
-                        if (r.startDate.startsWith(ymPrefix)) {
+                        vehStats[v].totalActive += daysCount;
+                        if (r.startDate.startsWith(prefix)) {
                             vehStats[v].km += (parseInt(r.km) || 0);
                         }
-                        if (t.includes('공공') || t.includes('서울')) vehStats[v].pubSeoul += daysInMonth;
-                        else if (t.includes('1박') || t.includes('2박')) vehStats[v].night += daysInMonth;
-                        else if (t.includes('성묘')) vehStats[v].grave += daysInMonth;
-                        else vehStats[v].cityEtc += daysInMonth;
+                        if (t.includes('공공') || t.includes('서울')) vehStats[v].pubSeoul += daysCount;
+                        else if (t.includes('1박') || t.includes('2박')) vehStats[v].night += daysCount;
+                        else if (t.includes('성묘')) vehStats[v].grave += daysCount;
+                        else vehStats[v].cityEtc += daysCount;
                     }
                 }
 
-                // 운전원별 배차 및 정산 집계
                 (r.assigned || []).forEach(drv => {
                     if (!driverStats[drv]) return;
                     const st = driverStats[drv];
 
                     if (r.isCanceled) {
-                        st.canceled += daysInMonth;
+                        st.canceled += daysCount;
                         st.details.push({
-                            date: monthDates.join('~'),
+                            date: matchedDates.join('~'),
                             text: `[취소됨] ${r.vehicle} (${r.type}) - ${r.start || '미입력'} ➔ ${r.end || '미입력'}`,
                             isCanceled: true
                         });
                     } else {
-                        st.totalActive += daysInMonth;
-                        if (t.includes('공공')) st.pub += daysInMonth;
-                        else if (t.includes('1박')) st.night1 += daysInMonth;
-                        else if (t.includes('2박')) st.night2 += daysInMonth;
-                        else if (t.includes('성묘')) st.grave += daysInMonth;
-                        else if (t.includes('시티')) st.city += daysInMonth;
-                        else st.etc += daysInMonth;
+                        st.totalActive += daysCount;
+                        if (t.includes('공공')) st.pub += daysCount;
+                        else if (t.includes('1박')) st.night1 += daysCount;
+                        else if (t.includes('2박')) st.night2 += daysCount;
+                        else if (t.includes('성묘')) st.grave += daysCount;
+                        else if (t.includes('시티')) st.city += daysCount;
+                        else st.etc += daysCount;
 
-                        monthDates.forEach(dStr => {
+                        matchedDates.forEach(dStr => {
                             const settle = (r.settlement && r.settlement[drv] && r.settlement[drv][dStr]) ? r.settlement[drv][dStr] : null;
                             if (settle) {
                                 st.overtime += (parseFloat(settle.overtime) || 0);
@@ -635,7 +775,7 @@
                         });
 
                         st.details.push({
-                            date: monthDates.join('~'),
+                            date: matchedDates.join('~'),
                             text: `[${r.vehicle}] ${r.type} | ${r.start || '미입력'} ➔ ${r.end || '미입력'} ${r.dest ? `(${r.dest})` : ''}`,
                             isCanceled: false
                         });
@@ -649,7 +789,7 @@
             let dHtml = '';
             let sum = { pub: 0, night1: 0, night2: 0, grave: 0, city: 0, etc: 0, totalActive: 0, canceled: 0, duty: 0, off: 0, overtime: 0, allowance: 0 };
 
-            monthDrivers.forEach(drv => {
+            targetDrivers.forEach(drv => {
                 const s = driverStats[drv];
                 sum.pub += s.pub; sum.night1 += s.night1; sum.night2 += s.night2;
                 sum.grave += s.grave; sum.city += s.city; sum.etc += s.etc;
@@ -738,6 +878,95 @@
                     <td>${vSum.canceled}</td>
                     <td>${vSum.km.toLocaleString()} km</td>
                 </tr>`;
+
+            renderMaintenanceStats();
+        }
+
+        // 🚀 차량별 주요 정비 및 정기검사 집계 렌더링 함수 (vehicle_logs 연동)
+        function renderMaintenanceStats() {
+            const isYear = (statsMode === 'year');
+            const prefix = isYear
+                ? `${currentYear}-`
+                : `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+            const periodLabel = isYear ? `${currentYear}년 연간` : `${currentYear}년 ${currentMonth + 1}월`;
+            document.getElementById('maint-period-sub').innerText = `${periodLabel} 고장수리 · 예방정비 · 정기검사 내역`;
+
+            // 해당 기간(월 또는 연도)의 정비/검사 기록 필터링 (단순 주행거리 입력만 있는 항목은 제외하고 정비/검사 내역만 추출)
+            const filteredLogs = allVehicleLogs.filter(log => {
+                if (!log.date || !log.date.startsWith(prefix)) return false;
+                const t = log.type || '';
+                return t === '고장수리' || t === '예방정비' || t === '정기검사' || log.cause || log.part || log.item || log.ipType || log.ipResult;
+            });
+
+            // 차량 순서(1호차~3818) -> 날짜순 정렬
+            const vehOrder = (v) => {
+                const idx = allVehicles.indexOf(v);
+                return idx !== -1 ? idx : 99;
+            };
+            filteredLogs.sort((a, b) => {
+                const vDiff = vehOrder(a.vehicle) - vehOrder(b.vehicle);
+                if (vDiff !== 0) return vDiff;
+                return (a.date || '').localeCompare(b.date || '');
+            });
+
+            let cntRepair = 0, cntPrev = 0, cntInsp = 0;
+            let tbodyHtml = '';
+
+            if (filteredLogs.length === 0) {
+                tbodyHtml = `<tr><td colspan="7" style="padding: 25px; color: #888; font-weight: 600;">${periodLabel}에 등록된 정비 및 정기검사 내역이 없습니다.</td></tr>`;
+            } else {
+                filteredLogs.forEach(log => {
+                    const t = log.type || (log.ipType || log.ipResult ? '정기검사' : (log.cause ? '고장수리' : '예방정비'));
+                    let typeBadge = '';
+                    let itemOrResult = '-';
+                    let actionOrNext = '-';
+
+                    if (t === '고장수리') {
+                        cntRepair++;
+                        typeBadge = `<span class="type-tag repair">고장수리</span>`;
+                        itemOrResult = log.cause || log.item || '-';
+                        actionOrNext = log.part || log.action || '-';
+                    } else if (t === '예방정비') {
+                        cntPrev++;
+                        typeBadge = `<span class="type-tag prev">예방정비</span>`;
+                        itemOrResult = log.item || log.cause || '-';
+                        actionOrNext = log.part || log.action || '점검/교체';
+                    } else if (t === '정기검사') {
+                        cntInsp++;
+                        typeBadge = `<span class="type-tag insp">정기검사</span>`;
+                        const ipTypeStr = log.ipType ? `[${log.ipType}] ` : '';
+                        const resStr = log.ipResult || '완료';
+                        const reasonStr = (log.ipResult === '불합격' && log.ipReason) ? ` <span style="color:#dc3545; font-weight:800;">(${log.ipReason})</span>` : (log.ipReason ? ` (${log.ipReason})` : '');
+                        itemOrResult = `${ipTypeStr}<b>${resStr}</b>${reasonStr}`;
+                        actionOrNext = log.ipNextDate ? `다음검사: <b>${log.ipNextDate}</b>` : '-';
+                    } else {
+                        typeBadge = `<span class="type-tag" style="background:#6c757d;">${t}</span>`;
+                        itemOrResult = log.item || log.cause || '-';
+                        actionOrNext = log.part || '-';
+                    }
+
+                    const kmNum = parseInt(log.total || log.km || 0);
+                    const kmText = kmNum > 0 ? `${kmNum.toLocaleString()} km` : '-';
+
+                    tbodyHtml += `
+                        <tr>
+                            <td style="font-weight:800; color:#0056b3;">${log.vehicle || '-'}</td>
+                            <td style="font-weight:600;">${log.date || '-'}</td>
+                            <td>${typeBadge}</td>
+                            <td style="font-weight:700;">${kmText}</td>
+                            <td style="text-align:left; padding-left:12px;">${itemOrResult}</td>
+                            <td style="text-align:left; padding-left:12px;">${actionOrNext}</td>
+                            <td style="font-weight:600; color:#555;">${log.shop || '-'}</td>
+                        </tr>`;
+                });
+            }
+
+            document.getElementById('maint-cnt-total').innerText = `${filteredLogs.length}건`;
+            document.getElementById('maint-cnt-repair').innerText = `${cntRepair}건`;
+            document.getElementById('maint-cnt-prev').innerText = `${cntPrev}건`;
+            document.getElementById('maint-cnt-insp').innerText = `${cntInsp}건`;
+            document.getElementById('maint-stats-tbody').innerHTML = tbodyHtml;
         }
 
         function showDriverDetails(drv) {
@@ -747,10 +976,11 @@
             const box = document.getElementById('driver-detail-box');
             const title = document.getElementById('driver-detail-title');
             const ul = document.getElementById('driver-detail-list');
+            const pText = statsMode === 'year' ? `${currentYear}년 연간` : `${currentMonth + 1}월`;
 
-            title.innerText = `📋 [${drv}] ${currentMonth + 1}월 상세 배차 내역 (실운행 ${st.totalActive}일 / 취소 ${st.canceled}일)`;
+            title.innerText = `📋 [${drv}] ${pText} 상세 배차 내역 (실운행 ${st.totalActive}일 / 취소 ${st.canceled}일)`;
             if (st.details.length === 0) {
-                ul.innerHTML = `<li style="color:#888;">이번 달 배차 내역이 없습니다.</li>`;
+                ul.innerHTML = `<li style="color:#888;">해당 기간의 배차 내역이 없습니다.</li>`;
             } else {
                 st.details.sort((a, b) => a.date.localeCompare(b.date));
                 ul.innerHTML = st.details.map(item => `
