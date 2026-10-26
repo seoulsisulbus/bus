@@ -999,6 +999,7 @@
             return autoDutyByDate[date] || [];
         }
 
+        // 🚀 2026-10-22(문인식) 기준 당번(당직) 자동 순환 엔진 (4일전 취소 발생 시 당직 자동 재계산)
         function calculateAutoDuty() {
             autoDutyByDate = {};
             if (!loadedStartStr || !loadedEndStr) return;
@@ -1010,6 +1011,7 @@
             const maxDutyObj = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate() + 14);
             const maxDutyStr = `${maxDutyObj.getFullYear()}-${String(maxDutyObj.getMonth() + 1).padStart(2, '0')}-${String(maxDutyObj.getDate()).padStart(2, '0')}`;
 
+            // 1. 2026-10-22 이전 날짜는 기존에 수동 지정된 당직만 그대로 표시
             Object.keys(dailyDriverStatus).forEach(dateStr => {
                 if (dateStr < anchorDateStr) {
                     const statusData = dailyDriverStatus[dateStr] || {};
@@ -1018,6 +1020,7 @@
                 }
             });
 
+            // 2. 2026-10-22부터 순차 계산
             let cur = new Date(2026, 9, 22);
             const end = new Date(loadedEndStr > maxDutyStr ? loadedEndStr : maxDutyStr);
             let lastDutyDriver = null;
@@ -1031,25 +1034,22 @@
                 const isHoliday = getHolidayName(y, m, d) !== null;
                 const statusData = dailyDriverStatus[dateStr] || {};
 
+                // 주말(파란색/빨간색) 및 공휴일·지정휴일(빨간색)은 당번 제외
                 if (dayOfWeek === 0 || dayOfWeek === 6 || isHoliday) {
                     autoDutyByDate[dateStr] = [];
                     cur.setDate(cur.getDate() + 1);
                     continue;
                 }
 
+                // 오늘 기준 2주(14일)를 넘어가는 미래 날짜는 자동 배정 중지
                 if (dateStr > maxDutyStr) {
-                    const manualFuture = Object.keys(statusData).filter(k => !k.startsWith('_') && statusData[k] === '당직');
+                    const manualFuture = statusData._manualDuty ? [statusData._manualDuty] : [];
                     autoDutyByDate[dateStr] = manualFuture;
                     cur.setDate(cur.getDate() + 1);
                     continue;
                 }
 
-                if (statusData._skipDuty) {
-                    autoDutyByDate[dateStr] = [];
-                    cur.setDate(cur.getDate() + 1);
-                    continue;
-                }
-
+                // 해당 날짜의 실제 운행자 파악 (4일전 취소된 배차는 운행자에서 제외 -> 당번 가능!)
                 const dayRes = allReservations.filter(r => (r.dates || []).includes(dateStr));
                 const workingDrivers = new Set();
                 dayRes.forEach(r => {
@@ -1058,13 +1058,22 @@
                     }
                 });
 
-                const manualDuty = Object.keys(statusData).filter(drv =>
-                    !drv.startsWith('_') &&
-                    statusData[drv] === '당직' &&
-                    drv !== '함동한' &&
-                    getDriverStatus(dateStr, drv) !== '휴무' &&
-                    !workingDrivers.has(drv)
-                );
+                // 2026-10-28 이전은 기존 당직 기록 유지, 2026-10-29 이후는 새로 수동 지정한(_manualDuty) 경우만 수동 우선 적용
+                let manualDuty = [];
+                if (dateStr <= '2026-10-28') {
+                    manualDuty = Object.keys(statusData).filter(drv =>
+                        !drv.startsWith('_') &&
+                        statusData[drv] === '당직' &&
+                        drv !== '함동한' &&
+                        getDriverStatus(dateStr, drv) !== '휴무' &&
+                        !workingDrivers.has(drv)
+                    );
+                } else if (statusData._manualDuty) {
+                    const mDrv = statusData._manualDuty;
+                    if (mDrv !== '함동한' && getDriverStatus(dateStr, mDrv) !== '휴무' && !workingDrivers.has(mDrv)) {
+                        manualDuty = [mDrv];
+                    }
+                }
 
                 if (manualDuty.length > 0) {
                     autoDutyByDate[dateStr] = manualDuty;
@@ -1078,6 +1087,7 @@
                         lastDutyDriver = anchorDriver;
                     }
                 } else {
+                    // 일반 평일: 직전 당번의 다음 순번부터 조건에 맞는 첫 번째 운전원 선발
                     const currentList = getEffectiveDriverList(dateStr);
                     let startIndex = 0;
                     if (lastDutyDriver && currentList.includes(lastDutyDriver)) {
@@ -1087,9 +1097,9 @@
                     let picked = null;
                     for (let i = 0; i < currentList.length; i++) {
                         const candidate = currentList[(startIndex + i) % currentList.length];
-                        if (candidate === '함동한') continue;
-                        if (getDriverStatus(dateStr, candidate) === '휴무') continue;
-                        if (workingDrivers.has(candidate)) continue;
+                        if (candidate === '함동한') continue; // 함동한 제외
+                        if (getDriverStatus(dateStr, candidate) === '휴무') continue; // 휴무자 제외
+                        if (workingDrivers.has(candidate)) continue; // 당일 실제 운행자 제외 (4일전 취소자는 당번에 포함!)
 
                         picked = candidate;
                         break;
@@ -1114,17 +1124,17 @@
             if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
 
             if (newStatus === '당직') {
-                delete dailyDriverStatus[currentDate]._skipDuty;
+                dailyDriverStatus[currentDate]._manualDuty = driver;
                 Object.keys(dailyDriverStatus[currentDate]).forEach(k => {
                     if (!k.startsWith('_') && dailyDriverStatus[currentDate][k] === '당직') {
                         dailyDriverStatus[currentDate][k] = '출근';
                     }
                 });
                 dailyDriverStatus[currentDate][driver] = '당직';
-            } else if (oldStatus === '당직' && newStatus === '출근') {
-                dailyDriverStatus[currentDate]._skipDuty = true;
-                dailyDriverStatus[currentDate][driver] = '출근';
             } else {
+                if (dailyDriverStatus[currentDate]._manualDuty === driver) {
+                    delete dailyDriverStatus[currentDate]._manualDuty;
+                }
                 dailyDriverStatus[currentDate][driver] = newStatus;
             }
             
@@ -1135,7 +1145,13 @@
 
         function recalculateAll(shouldSaveToDB = true) {
             const originalStateString = JSON.stringify(allReservations);
-            allReservations.forEach(r => r.assigned = []);
+            allReservations.forEach(r => {
+                // 🚀 4일전 취소된 배차는 취소 당시 배정된 운전원을 고정 기억 (휴무 시에도 다른 배차가 밀리지 않게 보호)
+                if (r.isCanceled && (!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
+                    r.canceledDrivers = [...r.assigned];
+                }
+                r.assigned = [];
+            });
             
             allReservations.sort((a, b) => {
                 if (a.startDate !== b.startDate) return new Date(a.startDate) - new Date(b.startDate);
@@ -1213,7 +1229,14 @@
                         let isWorkingAllDays = true;
                         
                         for (let d of res.dates) {
-                            if (getDriverStatus(d, candidate) === '휴무') { isWorkingAllDays = false; break; }
+                            if (getDriverStatus(d, candidate) === '휴무') {
+                                // 🚀 4일전 취소된 배차의 운전원이 취소로 인해 휴무를 쓴 경우, 건너뛰지 않고 자리 유지!
+                                if (res.isCanceled && res.canceledDrivers && res.canceledDrivers.includes(candidate)) {
+                                    continue;
+                                }
+                                isWorkingAllDays = false;
+                                break;
+                            }
                         }
 
                         let isOverlapping = false;
@@ -1260,6 +1283,16 @@
                 cur.setDate(cur.getDate() + 1);
             }
             return dates;
+        }
+
+        // 🚀 배차 변동(예약등록/취소/4일전취소) 시 수동 당직 고정을 풀어 자동 당직이 즉시 다시 계산되게 함
+        function unlockManualDutyOnDates(dates) {
+            (dates || []).forEach(d => {
+                if (dailyDriverStatus[d] && dailyDriverStatus[d]._manualDuty) {
+                    delete dailyDriverStatus[d]._manualDuty;
+                    db.collection('daily_status').doc(d).set(dailyDriverStatus[d]).catch(e=>{});
+                }
+            });
         }
 
         async function makeReservation(vehicleName, isBus) {
@@ -1312,6 +1345,7 @@
                 type: type, km: parseInt(document.getElementById(`km_${vehicleName}`).value) || 0,
                 reqCount: reqCount, assigned: [],
                 isCanceled: false,
+                canceledDrivers: [],
                 isManual: isManual,
                 manualDrivers: manualDrivers,
                 nextPointerDriver: nextPointerDriver,
@@ -1319,6 +1353,7 @@
                 settlement: settlement
             });
 
+            unlockManualDutyOnDates(dates);
             document.getElementById(`v_${vehicleName}`).checked = false;
             document.getElementById(`form_${vehicleName}`).style.display = "none";
             recalculateAll(true); 
@@ -1328,8 +1363,10 @@
         function cancelReservation(vehicleName) {
             const index = allReservations.findIndex(r => r.vehicle === vehicleName && r.dates.includes(currentDate));
             if (index !== -1) {
+                const targetDates = allReservations[index].dates || [currentDate];
                 db.collection('reservations').doc(allReservations[index].id).delete().catch(e => {});
                 allReservations.splice(index, 1);
+                unlockManualDutyOnDates(targetDates);
                 recalculateAll(true); 
                 alert(`[${vehicleName}] 배차가 완전 취소(삭제) 처리되었습니다.`);
             } else {
@@ -1343,6 +1380,8 @@
             const index = allReservations.findIndex(r => r.vehicle === vehicleName && r.dates.includes(currentDate));
             if (index !== -1) {
                 allReservations[index].isCanceled = true;
+                allReservations[index].canceledDrivers = [...(allReservations[index].assigned || [])];
+                unlockManualDutyOnDates(allReservations[index].dates || [currentDate]);
                 db.collection('reservations').doc(allReservations[index].id).set(allReservations[index]).catch(e=>{});
                 recalculateAll(true); 
                 alert(`[${vehicleName}] 4일 전 취소 처리되었습니다.`);
@@ -1862,7 +1901,7 @@
                 
                 if (files.length > 0) {
                     files.forEach((f, idx) => {
-                        // 🚀 신청서 목록에는 파일 이름(예: 10-28-13.png)만 깔끔하게 한 줄로 표시!
+                        // 🚀 신청서 보관함 및 드롭다운에는 파일 이름만 깔끔하게 표시!
                         attachHtml += `
                             <li style="margin-bottom: 5px; display: flex; gap: 5px; align-items: center;">
                                 <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #0056b3; background: #f0f7ff; border: 1px solid #b8daff; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
@@ -1870,7 +1909,6 @@
                                 </a>
                                 <button onclick="deleteDailyFile('${date}', ${idx})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">삭제</button>
                             </li>`;
-                        // 🚀 드롭다운에도 파일 이름만 표시 (선택 시 숨겨둔 출발지/도착지/단체명이 각 칸에 자동 입력됨)
                         optionsHtml += `<option value="${f.url}">${f.name}</option>`;
                     });
                 }
@@ -2001,14 +2039,14 @@
             });
         })();
 
-        // 🚀 한글 가로줄 전용(PSM 6) OCR 워커 캐시 (우->좌 역순 깨짐 완벽 방지 & 인식 속도 2배 향상)
+        // 🚀 한글 가로줄 전용(PSM 6) OCR 워커 캐시
         let _ocrWorkerPromise = null;
         async function getKorOcrWorker() {
             if (!_ocrWorkerPromise) {
                 _ocrWorkerPromise = (async () => {
                     const worker = await Tesseract.createWorker('kor');
                     await worker.setParameters({
-                        tessedit_pageseg_mode: '6', // 단일 가로 블록 모드 (세로쓰기/역순 읽기 차단)
+                        tessedit_pageseg_mode: '6',
                         preserve_interword_spaces: '1'
                     });
                     return worker;
@@ -2017,7 +2055,7 @@
             return _ocrWorkerPromise;
         }
 
-        // 🚀 [완성형] 첫 글자 깨짐 방지 + 2줄 주소 정방향 인식 + 단체명 옆 칸 정확 추출
+        // 🚀 신청서 이미지에서 출발지, 목적지, 단체명(성묘/시티는 공란) 자동 추출
         async function extractRouteFromImage(file) {
             if (!file || !file.type.startsWith('image/') || typeof Tesseract === 'undefined') {
                 return { start: '', end: '', org: '' };
@@ -2075,7 +2113,6 @@
                             });
                             const yLines = hLines.map(g => Math.round(g.sum / g.count));
 
-                            // 특정 X구간에서 위아래 가로선을 잇는 세로 테두리선 X좌표 찾기
                             const findVerticalLine = (xMin, xMax, yTop, yBot, ratio = 0.75) => {
                                 const h = Math.max(1, yBot - yTop - 2);
                                 const q = Math.max(2, Math.floor(h * 0.25));
@@ -2112,9 +2149,7 @@
 
                                 const xEarlyDiv = findVerticalLine(xLabelRight + Math.floor(W * 0.04), Math.floor(W * 0.42), yTop, yBot, 0.75);
                                 const xMidDiv = findVerticalLine(Math.floor(W * 0.44), Math.floor(W * 0.58), yTop, yBot, 0.75);
-                                // '전화번호' 왼쪽 세로선(45%~49%) 유무 확인
                                 const xPhoneLeft = findVerticalLine(Math.floor(W * 0.44), Math.floor(W * 0.49), yTop, yBot, 0.75);
-                                // '단체명' 왼쪽 세로선(51%~55%) 및 오른쪽 세로선(60%~66%) 확인
                                 const xOrgLabelLeft = findVerticalLine(Math.floor(W * 0.51), Math.floor(W * 0.56), yTop, yBot, 0.75);
                                 const xOrgLabelRight = findVerticalLine(Math.floor(W * 0.60), Math.floor(W * 0.66), yTop, yBot, 0.75);
                                 let xOuterRight = findVerticalLine(Math.floor(W * 0.88), Math.floor(W * 0.99), yTop, yBot, 0.70);
@@ -2188,7 +2223,6 @@
                                         startRow = { ...cur, xLeft: cur.xLabelRight, xRight: rightLimit };
                                         endRow = { ...next, xLeft: next.xLabelRight, xRight: rightLimit };
 
-                                        // 목적지 아래 행들 중 '전화번호' 칸막이(46%)가 없고 '단체명' 칸막이(53% & 62.5%)가 있는 행 찾기
                                         for (let k = i + 3; k <= Math.min(mainTable.length - 1, i + 5); k++) {
                                             const r = mainTable[k];
                                             if (r.xPhoneLeft === -1 && r.xOrgLabelLeft !== -1 && r.xOrgLabelRight !== -1) {
@@ -2196,7 +2230,6 @@
                                                 break;
                                             }
                                         }
-                                        // 만약 위 조건에서 못 찾으면 목적지 3칸 아래(e-mail/단체명 행)에서 추출
                                         if (!orgRow && mainTable[i + 4]) {
                                             const r = mainTable[i + 4];
                                             const leftX = r.xOrgLabelRight !== -1 ? r.xOrgLabelRight : Math.floor(W * 0.625);
@@ -2212,12 +2245,11 @@
                                 return;
                             }
 
-                            // 4. [핵심] 테두리 선만 정확히 지우고 첫 글자는 1픽셀도 잘리지 않게 오려내는 함수
+                            // 4. 테두리 선만 정확히 지우고 첫 글자는 1픽셀도 잘리지 않게 오려내는 함수
                             const cropValueCell = (row) => {
                                 const rawW = Math.max(10, row.xRight - row.xLeft);
                                 const rawH = Math.max(10, row.yBot - row.yTop);
 
-                                // 원본 크기로 칸 전체를 먼저 가져옴
                                 const tmpCanvas = document.createElement('canvas');
                                 tmpCanvas.width = rawW;
                                 tmpCanvas.height = rawH;
@@ -2227,7 +2259,7 @@
                                 const tImg = tmpCtx.getImageData(0, 0, rawW, rawH);
                                 const td = tImg.data;
 
-                                // ① 상하 테두리 선 잔상 제거 (위아래 3px 내에서 가로로 어두운 줄을 흰색으로 지움)
+                                // ① 상하 테두리 선 잔상 제거
                                 for (let y = 0; y < Math.min(4, rawH); y++) {
                                     let dark = 0;
                                     for (let x = 0; x < rawW; x++) {
@@ -2255,7 +2287,7 @@
                                     }
                                 }
 
-                                // ② 왼쪽 세로 테두리 선만 흰색 여백이 나올 때까지 정확히 지움 (첫 글자 '인', '도', '창' 보호!)
+                                // ② 왼쪽 세로 테두리 선만 흰색 여백이 나올 때까지 제거
                                 const maxLeftScan = Math.min(12, Math.floor(rawW * 0.08));
                                 let cleanLeftX = 0;
                                 for (let x = 0; x < maxLeftScan; x++) {
@@ -2299,7 +2331,7 @@
                                     }
                                 }
 
-                                // ④ 글자 획이 뭉개지지 않도록 자연스러운 그레이스케일 변환 (빨간 글씨도 진한 검은색으로 변환)
+                                // ④ 글자 선명화
                                 for (let i = 0; i < td.length; i += 4) {
                                     const minC = Math.min(td[i], td[i + 1], td[i + 2]);
                                     const val = minC > 225 ? 255 : minC;
@@ -2308,7 +2340,7 @@
                                 }
                                 tmpCtx.putImageData(tImg, 0, 0);
 
-                                // ⑤ 인식률을 높이기 위해 충분한 흰 여백을 두르고 2.5배 확대
+                                // ⑤ 흰 여백 추가 및 2.5배 확대
                                 const scale = 2.5;
                                 const margin = 30;
                                 const outCanvas = document.createElement('canvas');
@@ -2347,7 +2379,6 @@
                             };
 
                             let orgText = orgRes && orgRes.data ? cleanText(orgRes.data.text) : '';
-                            // 전화번호처럼 숫자가 6개 이상 포함된 문자열이면 제외
                             if ((orgText.match(/\d/g) || []).length >= 6) {
                                 orgText = '';
                             }
