@@ -35,7 +35,7 @@
         .section-title span.sub { font-size: 0.8rem; color: #007bff; font-weight: 600; }
 
         .table-wrap { width: 100%; overflow-x: auto; }
-        table.stats-table { width: 100%; border-collapse: collapse; min-width: 820px; font-size: 0.9rem; text-align: center; }
+        table.stats-table { width: 100%; border-collapse: collapse; min-width: 680px; font-size: 0.9rem; text-align: center; }
         table.stats-table th, table.stats-table td { border: 1px solid #dee2e6; padding: 10px 6px; }
         table.stats-table th { background: #eef2f7; font-weight: 800; color: #333; white-space: nowrap; }
         table.stats-table tbody tr:hover { background: #f8f9fa; }
@@ -49,7 +49,6 @@
         .num-cancel { color: #adb5bd; font-weight: 600; }
         .num-duty { color: #f29900; font-weight: 800; }
         .num-off { color: #d9534f; font-weight: 700; }
-        .num-settle { color: #155724; font-weight: 800; background: #f0fdf4; }
 
         #driver-detail-box { display: none; margin-top: 15px; background: #f8f9fa; border: 2px solid #007bff; border-radius: 8px; padding: 15px; }
         #driver-detail-box h4 { color: #007bff; margin-bottom: 10px; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; }
@@ -111,8 +110,8 @@
             </div>
 
             <div class="section-title">
-                <span>👤 운전원별 배차 및 정산 현황</span>
-                <span class="sub">💡 운전원 이름을 누르면 아래에 상세 운행 내역이 펼쳐집니다. (단위: 일수 기준)</span>
+                <span>👤 운전원별 배차 현황</span>
+                <span class="sub">💡 1박·2박은 횟수(건)로 표시되며, 실운행 합계에는 일수(1박=2일, 2박=3일)로 합산됩니다.</span>
             </div>
 
             <div class="table-wrap">
@@ -121,17 +120,15 @@
                         <tr>
                             <th>운전원</th>
                             <th>공공</th>
-                            <th>1박(일)</th>
-                            <th>2박(일)</th>
+                            <th>1박(회)</th>
+                            <th>2박(회)</th>
                             <th>성묘</th>
                             <th>시티</th>
                             <th>서울/기타</th>
-                            <th>실운행 합계</th>
+                            <th>실운행 합계(일)</th>
                             <th>4일전취소</th>
                             <th>당직</th>
                             <th>휴무</th>
-                            <th>보상시간(T)</th>
-                            <th>일비 합계(원)</th>
                         </tr>
                     </thead>
                     <tbody id="driver-stats-tbody"></tbody>
@@ -152,7 +149,7 @@
         <!-- 2. 차량별 운행 집계 카드 -->
         <div class="card">
             <div class="section-title">
-                <span>🚌 차량별 운행 일수 및 거리(km) 집계</span>
+                <span>🚌 차량별 운행 집계</span>
                 <span class="sub" id="veh-period-sub"></span>
             </div>
             <div class="table-wrap">
@@ -162,12 +159,12 @@
                             <th>차량명</th>
                             <th>구분</th>
                             <th>공공/서울</th>
-                            <th>1박/2박(일)</th>
+                            <th>1박(회)</th>
+                            <th>2박(회)</th>
                             <th>성묘</th>
                             <th>시티/기타</th>
-                            <th>실운행(일)</th>
+                            <th>실운행 합계(일)</th>
                             <th>4일전취소</th>
-                            <th>예약 거리(km)</th>
                         </tr>
                     </thead>
                     <tbody id="vehicle-stats-tbody"></tbody>
@@ -257,12 +254,12 @@
         let dailyDriverStatus = {};
         let autoDutyByDate = {};
         let allReservations = [];
-        let allVehicleLogs = []; // vehicle_logs 정비 데이터 저장소
+        let allVehicleLogs = [];
 
         const _now = new Date();
         let currentYear = _now.getFullYear();
         let currentMonth = _now.getMonth();
-        let statsMode = 'month'; // 'month'(월별) 또는 'year'(년별)
+        let statsMode = 'month';
         let currentUser = localStorage.getItem('loggedInUser') || '';
 
         let loadedStartStr = '';
@@ -304,7 +301,7 @@
             return dailyDriverStatus[date][driver] || '출근';
         }
 
-        // 🚀 메인창(index.html)과 100% 동일한 당번(당직) 자동 순환 엔진
+        // 메인창(index.html)과 100% 동일한 당번(당직) 자동 순환 엔진
         function calculateAutoDuty() {
             autoDutyByDate = {};
             if (!loadedStartStr || !loadedEndStr) return;
@@ -415,7 +412,7 @@
             }
         }
 
-        // 🚀 메인창(index.html)과 100% 동일한 배차 계산 엔진 (4일전 취소자 휴무 시 배차 고정 반영)
+        // 메인창(index.html)과 100% 동일한 배차 계산 엔진 (4일전 취소자 휴무 시 배차 고정 반영)
         function recalculateAll() {
             allReservations.forEach(r => {
                 if (r.isCanceled && (!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
@@ -557,7 +554,6 @@
             if (unsubRes) unsubRes();
             if (unsubLogs) unsubLogs();
 
-            // 1. 배차 예약 데이터 수신
             unsubRes = db.collection('reservations')
                          .where("startDate", ">=", loadedStartStr)
                          .where("startDate", "<=", loadedEndStr)
@@ -574,7 +570,6 @@
                 document.getElementById('loading-overlay').style.display = 'none';
             });
 
-            // 2. 차량 정비/검사(vehicle_logs) 데이터 수신
             unsubLogs = db.collection('vehicle_logs')
                           .where("date", ">=", loadedStartStr)
                           .where("date", "<=", loadedEndStr)
@@ -610,7 +605,6 @@
             }
         }
 
-        // 🚀 월별 보기 / 년별(연간) 보기 전환 함수
         function setStatsMode(mode) {
             statsMode = mode;
             document.getElementById('mode-month-btn').classList.toggle('active', mode === 'month');
@@ -691,12 +685,11 @@
             targetDrivers.forEach(d => {
                 driverStats[d] = {
                     pub: 0, night1: 0, night2: 0, grave: 0, city: 0, etc: 0,
-                    totalActive: 0, canceled: 0, duty: 0, off: 0,
-                    overtime: 0, allowance: 0, details: []
+                    totalActive: 0, canceled: 0, duty: 0, off: 0, details: []
                 };
             });
 
-            // 1. 해당 기간(월 또는 연도)의 당직 및 휴무 집계
+            // 1. 해당 기간의 당직 및 휴무 집계
             Object.keys(autoDutyByDate).forEach(dateStr => {
                 if (dateStr.startsWith(prefix)) {
                     (autoDutyByDate[dateStr] || []).forEach(drv => {
@@ -719,75 +712,69 @@
             // 2. 차량별 집계 초기화
             const vehStats = {};
             allVehicles.forEach(v => {
-                vehStats[v] = { pubSeoul: 0, night: 0, grave: 0, cityEtc: 0, totalActive: 0, canceled: 0, km: 0 };
+                vehStats[v] = { pubSeoul: 0, night1: 0, night2: 0, grave: 0, cityEtc: 0, totalActive: 0, canceled: 0 };
             });
 
-            // 3. 예약 내역 순회하며 운전원별 & 차량별 집계
+            // 3. 예약 내역 순회하며 운전원별 & 차량별 집계 (1박/2박은 횟수 +1, 실운행 합계는 일수 +2/+3)
             allReservations.forEach(r => {
-                const matchedDates = (r.dates || []).filter(d => d.startsWith(prefix));
-                if (matchedDates.length === 0) return;
+                const isStartInPeriod = (r.startDate || '').startsWith(prefix);
+                if (!isStartInPeriod) return;
 
-                const daysCount = matchedDates.length;
                 const t = r.type || '';
                 const v = r.vehicle;
+                const tripDays = (r.dates && r.dates.length > 0)
+                    ? r.dates.length
+                    : (t.includes('2박') ? 3 : (t.includes('1박') ? 2 : 1));
 
+                // 차량별 집계
                 if (vehStats[v]) {
                     if (r.isCanceled) {
-                        vehStats[v].canceled += daysCount;
+                        vehStats[v].canceled += 1;
                     } else {
-                        vehStats[v].totalActive += daysCount;
-                        if (r.startDate.startsWith(prefix)) {
-                            vehStats[v].km += (parseInt(r.km) || 0);
-                        }
-                        if (t.includes('공공') || t.includes('서울')) vehStats[v].pubSeoul += daysCount;
-                        else if (t.includes('1박') || t.includes('2박')) vehStats[v].night += daysCount;
-                        else if (t.includes('성묘')) vehStats[v].grave += daysCount;
-                        else vehStats[v].cityEtc += daysCount;
+                        vehStats[v].totalActive += tripDays;
+                        if (t.includes('공공') || t.includes('서울')) vehStats[v].pubSeoul += 1;
+                        else if (t.includes('1박')) vehStats[v].night1 += 1;
+                        else if (t.includes('2박')) vehStats[v].night2 += 1;
+                        else if (t.includes('성묘')) vehStats[v].grave += 1;
+                        else vehStats[v].cityEtc += 1;
                     }
                 }
 
+                // 운전원별 집계
                 (r.assigned || []).forEach(drv => {
                     if (!driverStats[drv]) return;
                     const st = driverStats[drv];
 
                     if (r.isCanceled) {
-                        st.canceled += daysCount;
+                        st.canceled += 1;
                         st.details.push({
-                            date: matchedDates.join('~'),
+                            date: (r.dates || [r.startDate]).join('~'),
                             text: `[취소됨] ${r.vehicle} (${r.type}) - ${r.start || '미입력'} ➔ ${r.end || '미입력'}`,
                             isCanceled: true
                         });
                     } else {
-                        st.totalActive += daysCount;
-                        if (t.includes('공공')) st.pub += daysCount;
-                        else if (t.includes('1박')) st.night1 += daysCount;
-                        else if (t.includes('2박')) st.night2 += daysCount;
-                        else if (t.includes('성묘')) st.grave += daysCount;
-                        else if (t.includes('시티')) st.city += daysCount;
-                        else st.etc += daysCount;
-
-                        matchedDates.forEach(dStr => {
-                            const settle = (r.settlement && r.settlement[drv] && r.settlement[drv][dStr]) ? r.settlement[drv][dStr] : null;
-                            if (settle) {
-                                st.overtime += (parseFloat(settle.overtime) || 0);
-                                st.allowance += (parseInt(settle.allowance) || 0);
-                            }
-                        });
+                        st.totalActive += tripDays;
+                        if (t.includes('공공')) st.pub += 1;
+                        else if (t.includes('1박')) st.night1 += 1;
+                        else if (t.includes('2박')) st.night2 += 1;
+                        else if (t.includes('성묘')) st.grave += 1;
+                        else if (t.includes('시티')) st.city += 1;
+                        else st.etc += 1;
 
                         st.details.push({
-                            date: matchedDates.join('~'),
-                            text: `[${r.vehicle}] ${r.type} | ${r.start || '미입력'} ➔ ${r.end || '미입력'} ${r.dest ? `(${r.dest})` : ''}`,
+                            date: (r.dates || [r.startDate]).join('~'),
+                            text: `[${r.vehicle}] ${r.type}(${tripDays}일) | ${r.start || '미입력'} ➔ ${r.end || '미입력'} ${r.dest ? `(${r.dest})` : ''}`,
                             isCanceled: false
                         });
                     }
                 });
             });
 
-            // 운전원 표 렌더링
+            // 운전원 표 렌더링 (보상시간/일비 합계 열 제거)
             const dTbody = document.getElementById('driver-stats-tbody');
             const dTfoot = document.getElementById('driver-stats-tfoot');
             let dHtml = '';
-            let sum = { pub: 0, night1: 0, night2: 0, grave: 0, city: 0, etc: 0, totalActive: 0, canceled: 0, duty: 0, off: 0, overtime: 0, allowance: 0 };
+            let sum = { pub: 0, night1: 0, night2: 0, grave: 0, city: 0, etc: 0, totalActive: 0, canceled: 0, duty: 0, off: 0 };
 
             targetDrivers.forEach(drv => {
                 const s = driverStats[drv];
@@ -795,7 +782,6 @@
                 sum.grave += s.grave; sum.city += s.city; sum.etc += s.etc;
                 sum.totalActive += s.totalActive; sum.canceled += s.canceled;
                 sum.duty += s.duty; sum.off += s.off;
-                sum.overtime += s.overtime; sum.allowance += s.allowance;
 
                 const isMe = (drv === currentUser) ? 'my-row' : '';
 
@@ -812,8 +798,6 @@
                         <td>${formatCell(s.canceled, 'num-cancel')}</td>
                         <td>${formatCell(s.duty, 'num-duty')}</td>
                         <td>${formatCell(s.off, 'num-off')}</td>
-                        <td class="num-settle">${s.overtime > 0 ? s.overtime.toFixed(2) : '<span class="num-zero">0.00</span>'}</td>
-                        <td class="num-settle">${s.allowance > 0 ? s.allowance.toLocaleString() : '<span class="num-zero">0</span>'}</td>
                     </tr>`;
             });
             dTbody.innerHTML = dHtml;
@@ -827,12 +811,10 @@
                     <td>${sum.grave}</td>
                     <td>${sum.city}</td>
                     <td>${sum.etc}</td>
-                    <td>${sum.totalActive}</td>
+                    <td>${sum.totalActive} 일</td>
                     <td>${sum.canceled}</td>
                     <td>${sum.duty}</td>
                     <td>${sum.off}</td>
-                    <td>${sum.overtime.toFixed(2)} T</td>
-                    <td>${sum.allowance.toLocaleString()} 원</td>
                 </tr>`;
 
             window._currentDriverStats = driverStats;
@@ -841,13 +823,13 @@
             const vTbody = document.getElementById('vehicle-stats-tbody');
             const vTfoot = document.getElementById('vehicle-stats-tfoot');
             let vHtml = '';
-            let vSum = { pubSeoul: 0, night: 0, grave: 0, cityEtc: 0, totalActive: 0, canceled: 0, km: 0 };
+            let vSum = { pubSeoul: 0, night1: 0, night2: 0, grave: 0, cityEtc: 0, totalActive: 0, canceled: 0 };
 
             allVehicles.forEach(v => {
                 const vs = vehStats[v];
-                vSum.pubSeoul += vs.pubSeoul; vSum.night += vs.night; vSum.grave += vs.grave;
-                vSum.cityEtc += vs.cityEtc; vSum.totalActive += vs.totalActive;
-                vSum.canceled += vs.canceled; vSum.km += vs.km;
+                vSum.pubSeoul += vs.pubSeoul; vSum.night1 += vs.night1; vSum.night2 += vs.night2;
+                vSum.grave += vs.grave; vSum.cityEtc += vs.cityEtc;
+                vSum.totalActive += vs.totalActive; vSum.canceled += vs.canceled;
 
                 const isBus = ['1호차', '2호차', '3호차', '예비버스'].includes(v);
                 const vType = v === '3818' ? '스타리아' : (isBus ? '대형버스' : '쏠라티');
@@ -857,12 +839,12 @@
                         <td style="font-weight:800;">${v}</td>
                         <td style="color:#666; font-size:0.85rem;">${vType}</td>
                         <td>${formatCell(vs.pubSeoul)}</td>
-                        <td>${formatCell(vs.night)}</td>
+                        <td>${formatCell(vs.night1)}</td>
+                        <td>${formatCell(vs.night2)}</td>
                         <td>${formatCell(vs.grave)}</td>
                         <td>${formatCell(vs.cityEtc)}</td>
                         <td class="num-total">${vs.totalActive}</td>
                         <td>${formatCell(vs.canceled, 'num-cancel')}</td>
-                        <td style="font-weight:700; color:#0056b3;">${vs.km.toLocaleString()} km</td>
                     </tr>`;
             });
             vTbody.innerHTML = vHtml;
@@ -871,18 +853,18 @@
                 <tr>
                     <th colspan="2">차량 총합계</th>
                     <td>${vSum.pubSeoul}</td>
-                    <td>${vSum.night}</td>
+                    <td>${vSum.night1}</td>
+                    <td>${vSum.night2}</td>
                     <td>${vSum.grave}</td>
                     <td>${vSum.cityEtc}</td>
-                    <td>${vSum.totalActive}</td>
+                    <td>${vSum.totalActive} 일</td>
                     <td>${vSum.canceled}</td>
-                    <td>${vSum.km.toLocaleString()} km</td>
                 </tr>`;
 
             renderMaintenanceStats();
         }
 
-        // 🚀 차량별 주요 정비 및 정기검사 집계 렌더링 함수 (vehicle_logs 연동)
+        // 차량별 주요 정비 및 정기검사 집계 렌더링 함수 (vehicle_logs 연동)
         function renderMaintenanceStats() {
             const isYear = (statsMode === 'year');
             const prefix = isYear
@@ -892,14 +874,12 @@
             const periodLabel = isYear ? `${currentYear}년 연간` : `${currentYear}년 ${currentMonth + 1}월`;
             document.getElementById('maint-period-sub').innerText = `${periodLabel} 고장수리 · 예방정비 · 정기검사 내역`;
 
-            // 해당 기간(월 또는 연도)의 정비/검사 기록 필터링 (단순 주행거리 입력만 있는 항목은 제외하고 정비/검사 내역만 추출)
             const filteredLogs = allVehicleLogs.filter(log => {
                 if (!log.date || !log.date.startsWith(prefix)) return false;
                 const t = log.type || '';
                 return t === '고장수리' || t === '예방정비' || t === '정기검사' || log.cause || log.part || log.item || log.ipType || log.ipResult;
             });
 
-            // 차량 순서(1호차~3818) -> 날짜순 정렬
             const vehOrder = (v) => {
                 const idx = allVehicles.indexOf(v);
                 return idx !== -1 ? idx : 99;
@@ -978,7 +958,7 @@
             const ul = document.getElementById('driver-detail-list');
             const pText = statsMode === 'year' ? `${currentYear}년 연간` : `${currentMonth + 1}월`;
 
-            title.innerText = `📋 [${drv}] ${pText} 상세 배차 내역 (실운행 ${st.totalActive}일 / 취소 ${st.canceled}일)`;
+            title.innerText = `📋 [${drv}] ${pText} 상세 배차 내역 (실운행 ${st.totalActive}일 / 취소 ${st.canceled}건)`;
             if (st.details.length === 0) {
                 ul.innerHTML = `<li style="color:#888;">해당 기간의 배차 내역이 없습니다.</li>`;
             } else {
