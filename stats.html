@@ -1136,7 +1136,8 @@
                         actionOrNext = log.part || '-';
                     }
 
-                    const kmNum = parseInt(log.total || log.km || 0);
+                    const rawKm = String(log.total || log.km || '0').replace(/,/g, '');
+                    const kmNum = parseInt(rawKm, 10) || 0;
                     const kmText = kmNum > 0 ? `${kmNum.toLocaleString()} km` : '-';
 
                     tbodyHtml += `
