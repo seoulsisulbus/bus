@@ -50,6 +50,14 @@
         .num-duty { color: #f29900; font-weight: 800; }
         .num-off { color: #d9534f; font-weight: 700; }
 
+        /* 주단위 근무시간 표 스타일 */
+        .week-opt-bar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 10px 14px; border-radius: 8px; border: 1px solid #e1e4e8; margin-bottom: 12px; font-size: 0.85rem; }
+        .week-opt-bar label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #333; cursor: pointer; }
+        .wk-days { font-weight: 800; color: #0056b3; }
+        .wk-hours { font-weight: 800; color: #155724; }
+        .wk-warn { color: #f29900; font-weight: 900; }
+        .wk-over { color: #dc3545; font-weight: 900; background: #fff5f5; }
+
         #driver-detail-box { display: none; margin-top: 15px; background: #f8f9fa; border: 2px solid #007bff; border-radius: 8px; padding: 15px; }
         #driver-detail-box h4 { color: #007bff; margin-bottom: 10px; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; }
         .detail-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; max-height: 360px; overflow-y: auto; }
@@ -146,7 +154,37 @@
             </div>
         </div>
 
-        <!-- 2. 차량별 운행 집계 카드 -->
+        <!-- 2. 주단위(월~일) 근무일수 및 순수 근무시간 집계 카드 -->
+        <div class="card" id="weekly-stats-card">
+            <div class="section-title">
+                <span>⏱️ 주간별(월~일) 근무일수 및 순수 근무시간 집계</span>
+                <span class="sub">※ 휴게시간(1시간) 차감 · 할증(보상배율) 미적용 순수 실근로시간 기준</span>
+            </div>
+
+            <div class="week-opt-bar">
+                <label>
+                    <input type="checkbox" id="opt-unentered-8h" onchange="renderWeeklyWorkStats()">
+                    시간 미입력 배차는 기본 8시간으로 합산
+                </label>
+                <label>
+                    <input type="checkbox" id="opt-include-duty" onchange="renderWeeklyWorkStats()">
+                    당직일도 주간 근무(1일 / 8시간)에 포함
+                </label>
+                <span style="margin-left:auto; font-size:0.78rem; color:#666;">
+                    표시 형식: <b style="color:#0056b3;">근무일수(일)</b> / <b style="color:#155724;">순수시간(h)</b> (40h 초과 주황색, 52h 초과 빨간색)
+                </span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="stats-table" id="weekly-stats-table">
+                    <thead id="weekly-stats-thead"></thead>
+                    <tbody id="weekly-stats-tbody"></tbody>
+                    <tfoot id="weekly-stats-tfoot"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. 차량별 운행 집계 카드 -->
         <div class="card">
             <div class="section-title">
                 <span>🚌 차량별 운행 집계</span>
@@ -173,7 +211,7 @@
             </div>
         </div>
 
-        <!-- 3. 차량 정비 및 정기검사 집계 카드 (vehicle_logs 연동) -->
+        <!-- 4. 차량 정비 및 정기검사 집계 카드 (vehicle_logs 연동) -->
         <div class="card">
             <div class="section-title" style="border-bottom: 2px solid #28a745; padding-bottom: 10px;">
                 <span>🔧 차량별 주요 정비 및 정기검사 집계</span>
@@ -412,7 +450,7 @@
             }
         }
 
-        // 메인창(index.html)과 100% 동일한 배차 계산 엔진 (4일전 취소자 휴무 시 배차 고정 반영)
+        // 메인창(index.html)과 100% 동일한 배차 계산 엔진
         function recalculateAll() {
             allReservations.forEach(r => {
                 if (r.isCanceled && (!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
@@ -530,7 +568,7 @@
         function ensureRangeForCurrentView() {
             if (statsMode === 'year') {
                 const reqStart = `${currentYear - 1}-12-01`;
-                const reqEnd = `${currentYear}-12-31`;
+                const reqEnd = `${currentYear + 1}-01-10`;
                 let changed = false;
                 if (!loadedStartStr || reqStart < loadedStartStr) { loadedStartStr = reqStart; changed = true; }
                 if (!loadedEndStr || reqEnd > loadedEndStr) { loadedEndStr = reqEnd; changed = true; }
@@ -661,6 +699,176 @@
             return val === 0 ? `<span class="num-zero">0</span>` : `<span class="${activeClass}">${val}</span>`;
         }
 
+        // 🚀 [핵심] 휴게시간(1시간)만 빼고 할증 배율(1.5x/2.0x)은 적용하지 않는 순수 근무시간 계산 함수
+        function calculatePureWorkHours(clockInStr, clockOutStr, type) {
+            if (!clockInStr || !clockOutStr) return null;
+            let inT = parseFloat(clockInStr);
+            let outT = parseFloat(clockOutStr);
+            if (isNaN(inT) || isNaN(outT)) return null;
+
+            if (outT < inT) outT += 24;
+            let rawDuration = Math.max(0, outT - inT);
+
+            let breakHours = 0;
+            if (type && (type.includes('시티투어(야)') || type.includes('시티(야)'))) {
+                // 야간 시티투어: 5시간 이상 근무 시 휴게 1시간 차감
+                if (rawDuration >= 5) breakHours = 1;
+            } else {
+                // 일반 운행: 점심시간(12~13시)을 포함하거나 4시간 이상 근무 시 휴게 1시간 차감
+                if ((inT <= 12 && outT >= 13) || rawDuration >= 4) {
+                    breakHours = 1;
+                }
+            }
+
+            let pure = Math.max(0, rawDuration - breakHours);
+            return Math.round(pure * 100) / 100;
+        }
+
+        // 🚀 선택된 월의 월요일~일요일 주간 구간 목록 생성 함수
+        function getWeeksForMonth(year, monthIndex) {
+            const firstOfMonth = new Date(year, monthIndex, 1);
+            const lastOfMonth = new Date(year, monthIndex + 1, 0);
+
+            // 첫 날이 속한 주의 월요일 찾기 (일요일(0)이면 -6일, 그 외 1 - dayOfWeek)
+            const firstDayOfWeek = firstOfMonth.getDay();
+            const diffToMon = firstDayOfWeek === 0 ? -6 : 1 - firstDayOfWeek;
+            let curMon = new Date(year, monthIndex, 1 + diffToMon);
+
+            const weeks = [];
+            let weekIdx = 1;
+
+            while (curMon <= lastOfMonth) {
+                const dates = [];
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(curMon.getFullYear(), curMon.getMonth(), curMon.getDate() + i);
+                    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    dates.push(dStr);
+                }
+                const startMD = `${curMon.getMonth() + 1}/${curMon.getDate()}`;
+                const sunObj = new Date(curMon.getFullYear(), curMon.getMonth(), curMon.getDate() + 6);
+                const endMD = `${sunObj.getMonth() + 1}/${sunObj.getDate()}`;
+
+                weeks.push({
+                    index: weekIdx++,
+                    label: `${weekIdx - 1}주차`,
+                    rangeText: `${startMD}(월)~${endMD}(일)`,
+                    dates: dates
+                });
+
+                curMon.setDate(curMon.getDate() + 7);
+            }
+            return weeks;
+        }
+
+        // 🚀 주단위(월~일) 근무일수 및 순수 근무시간 렌더링 함수
+        function renderWeeklyWorkStats() {
+            const card = document.getElementById('weekly-stats-card');
+            if (!card) return;
+
+            // 연간 보기 모드일 때는 주간표 대신 안내 표시 또는 현재 월 기준 표시
+            const weeks = getWeeksForMonth(currentYear, currentMonth);
+            const refEndDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(new Date(currentYear, currentMonth + 1, 0).getDate()).padStart(2, '0')}`;
+            const targetDrivers = getEffectiveDriverList(refEndDate);
+            defaultDrivers.forEach(d => { if (!targetDrivers.includes(d)) targetDrivers.push(d); });
+
+            const useDefault8h = document.getElementById('opt-unentered-8h') && document.getElementById('opt-unentered-8h').checked;
+            const includeDuty = document.getElementById('opt-include-duty') && document.getElementById('opt-include-duty').checked;
+
+            // 헤더 생성
+            const thead = document.getElementById('weekly-stats-thead');
+            let headHtml = `<tr><th rowspan="2" style="min-width:75px;">운전원</th>`;
+            weeks.forEach(w => {
+                headHtml += `<th>${w.label}<br><span style="font-size:0.75rem; font-weight:600; color:#555;">${w.rangeText}</span></th>`;
+            });
+            headHtml += `<th rowspan="2" style="background:#e8f0fe; color:#0056b3;">주간 누적<br>(일수 / 순수h)</th></tr><tr>`;
+            weeks.forEach(() => {
+                headHtml += `<th style="font-size:0.78rem; padding:5px 4px; background:#f8f9fa; color:#666;">일수 / 순수시간</th>`;
+            });
+            headHtml += `</tr>`;
+            thead.innerHTML = headHtml;
+
+            // 운전원별 x 주차별 계산
+            const tbody = document.getElementById('weekly-stats-tbody');
+            const tfoot = document.getElementById('weekly-stats-tfoot');
+            let bodyHtml = '';
+
+            const weekTotals = weeks.map(() => ({ days: 0, hours: 0 }));
+            let grandDays = 0;
+            let grandHours = 0;
+
+            targetDrivers.forEach(drv => {
+                const isMe = (drv === currentUser) ? 'my-row' : '';
+                let rowHtml = `<tr class="${isMe}"><td style="font-weight:800; color:#0056b3;">${drv}</td>`;
+
+                let drvTotalDays = 0;
+                let drvTotalHours = 0;
+
+                weeks.forEach((w, wIdx) => {
+                    let wDays = 0;
+                    let wHours = 0;
+
+                    w.dates.forEach(dateStr => {
+                        // 해당 날짜에 이 운전원이 배정된 유효(미취소) 배차 찾기
+                        const activeRes = allReservations.filter(r => !r.isCanceled && (r.dates || []).includes(dateStr) && (r.assigned || []).includes(drv));
+
+                        if (activeRes.length > 0) {
+                            wDays += 1;
+                            activeRes.forEach(r => {
+                                const settle = (r.settlement && r.settlement[drv] && r.settlement[drv][dateStr]) ? r.settlement[drv][dateStr] : null;
+                                const pureH = settle ? calculatePureWorkHours(settle.clockIn, settle.clockOut, r.type) : null;
+                                if (pureH !== null) {
+                                    wHours += pureH;
+                                } else if (useDefault8h) {
+                                    wHours += 8;
+                                }
+                            });
+                        } else if (includeDuty && (autoDutyByDate[dateStr] || []).includes(drv)) {
+                            wDays += 1;
+                            wHours += 8;
+                        }
+                    });
+
+                    wHours = Math.round(wHours * 100) / 100;
+                    drvTotalDays += wDays;
+                    drvTotalHours += wHours;
+                    weekTotals[wIdx].days += wDays;
+                    weekTotals[wIdx].hours += wHours;
+
+                    if (wDays === 0 && wHours === 0) {
+                        rowHtml += `<td><span class="num-zero">0일 / 0h</span></td>`;
+                    } else {
+                        let hourClass = 'wk-hours';
+                        let cellClass = '';
+                        if (wHours > 52) { hourClass = 'wk-over'; cellClass = 'wk-over'; }
+                        else if (wHours > 40) { hourClass = 'wk-warn'; }
+
+                        const hDisp = Number.isInteger(wHours) ? wHours : wHours.toFixed(1);
+                        rowHtml += `<td class="${cellClass}"><span class="wk-days">${wDays}일</span> / <span class="${hourClass}">${hDisp}h</span></td>`;
+                    }
+                });
+
+                drvTotalHours = Math.round(drvTotalHours * 100) / 100;
+                grandDays += drvTotalDays;
+                grandHours += drvTotalHours;
+
+                const totHDisp = Number.isInteger(drvTotalHours) ? drvTotalHours : drvTotalHours.toFixed(1);
+                rowHtml += `<td class="num-total">${drvTotalDays}일 / ${totHDisp}h</td></tr>`;
+                bodyHtml += rowHtml;
+            });
+
+            tbody.innerHTML = bodyHtml;
+
+            // 하단 주차별 합계
+            let footHtml = `<tr><th>주차별 합계</th>`;
+            weekTotals.forEach(wt => {
+                const hDisp = Number.isInteger(wt.hours) ? wt.hours : wt.hours.toFixed(1);
+                footHtml += `<td>${wt.days}일 / ${hDisp}h</td>`;
+            });
+            const gHDisp = Number.isInteger(grandHours) ? grandHours : grandHours.toFixed(1);
+            footHtml += `<td>${grandDays}일 / ${gHDisp}h</td></tr>`;
+            tfoot.innerHTML = footHtml;
+        }
+
         function renderStats() {
             const isYear = (statsMode === 'year');
             const prefix = isYear
@@ -770,7 +978,7 @@
                 });
             });
 
-            // 운전원 표 렌더링 (보상시간/일비 합계 열 제거)
+            // 운전원 표 렌더링
             const dTbody = document.getElementById('driver-stats-tbody');
             const dTfoot = document.getElementById('driver-stats-tfoot');
             let dHtml = '';
@@ -861,6 +1069,8 @@
                     <td>${vSum.canceled}</td>
                 </tr>`;
 
+            // 주간별(월~일) 근무일수 및 순수 근무시간 렌더링 호출
+            renderWeeklyWorkStats();
             renderMaintenanceStats();
         }
 
