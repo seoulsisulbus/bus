@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
     <title>차량 정비 대장</title>
-    
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -132,7 +131,6 @@
         <span id="loading-text">차량 정비 데이터 불러오는 중...</span>
     </div>
 
-    <!-- 상단 바 -->
     <div class="top-bar">
         <div class="top-title">
             <span>🔧 차량 정비 및 일일점검 대장</span>
@@ -141,13 +139,11 @@
     </div>
 
     <div class="container">
-        <!-- 미해결 특이사항 & 정기검사 불합격 전체 알림 배너 -->
         <div id="global-alert-banner">
             <div class="alert-banner-title">🚨 현재 미해결 차량 경고 (정비 및 재검 요망)</div>
             <div class="alert-banner-grid" id="global-alert-list"></div>
         </div>
 
-        <!-- 달력 카드 -->
         <div class="card">
             <div class="calendar-header">
                 <div class="month-title-box">
@@ -155,7 +151,6 @@
                     <button class="btn-today-mini" onclick="goToToday()">오늘</button>
                 </div>
 
-                <!-- 정비창 상단 버튼 그룹: location.replace로 기록 중첩 방지 -->
                 <div class="header-action-group">
                     <button onclick="openModalForSelectedDate()" style="background: #ffc107; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">+ 기록추가</button>
                     <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">PC버전</button>
@@ -169,7 +164,6 @@
             <div class="calendar-grid" id="calendar-grid"></div>
         </div>
 
-        <!-- 하단 선택 날짜 상세 내역 카드 -->
         <div class="card">
             <div class="detail-header-bar">
                 <h3 id="detail-title" style="margin:0; font-size: 1.1rem; color: #155724;">기록 상세</h3>
@@ -181,7 +175,6 @@
         </div>
     </div>
 
-    <!-- 기록 추가 / 수정 모달 -->
     <div id="modal-overlay" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-title">
@@ -226,7 +219,6 @@
                 </div>
             </div>
 
-            <!-- 1. 고장수리 폼 -->
             <div id="form-breakdown" style="display: none;">
                 <div class="form-group"><label>고장 원인</label><input type="text" id="bd-cause" placeholder="예: 브레이크 밀림, 에어컨 불량"></div>
                 <div class="form-group"><label>수리 부품</label><input type="text" id="bd-part" placeholder="예: 앞바퀴 라이닝, 콤프레샤"></div>
@@ -259,7 +251,6 @@
                 </div>
             </div>
 
-            <!-- 2. 예방정비 폼 -->
             <div id="form-preventive" style="display: none;">
                 <div class="form-group"><label>점검 / 정비 항목</label><input type="text" id="pv-item" placeholder="예: 엔진오일, 타이어, 분기세차"></div>
                 <div class="form-group">
@@ -290,7 +281,6 @@
                 </div>
             </div>
 
-            <!-- 3. 정기검사 폼 -->
             <div id="form-inspection" style="display: none;">
                 <div class="form-group">
                     <label>검사 구분</label>
@@ -339,13 +329,11 @@
                 </div>
             </div>
 
-            <!-- 4. 특이사항 폼 -->
             <div id="form-issue" style="display: none;">
                 <div class="form-group"><label>증상 요약</label><input type="text" id="is-title" placeholder="예: 고속 주행 시 핸들 떨림"></div>
                 <div class="form-group"><label>상세 내용 및 다음 운전자 주의사항</label><input type="text" id="is-detail" placeholder="예: 80km 이상 주행 시 진동 발생, 점검 요망"></div>
             </div>
 
-            <!-- 5. 일지(일정비) 폼 -->
             <div id="form-routine">
                 <div id="issue-warning-container" class="issue-warning-box"></div>
 
@@ -492,7 +480,7 @@
             const sel = document.getElementById(`${prefix}-shop`);
             const inp = document.getElementById(`${prefix}-shop-custom`);
             if (!sel || !inp) return;
-            if (sel.value === '__custom__') {
+            if (sel.value === 'custom') {
                 inp.style.display = 'block';
                 inp.focus();
             } else {
@@ -514,7 +502,7 @@
                 inp.style.display = 'none';
                 inp.value = '';
             } else {
-                sel.value = '__custom__';
+                sel.value = 'custom';
                 inp.style.display = 'block';
                 inp.value = shopVal;
             }
@@ -524,7 +512,7 @@
             const sel = document.getElementById(`${prefix}-shop`);
             const inp = document.getElementById(`${prefix}-shop-custom`);
             if (!sel) return '';
-            if (sel.value === '__custom__') return (inp ? inp.value.trim() : '');
+            if (sel.value === 'custom') return (inp ? inp.value.trim() : '');
             return sel.value;
         }
 
@@ -1052,7 +1040,6 @@
                 modal.style.display = 'none';
                 return;
             }
-            // 모달이 안 열려 있을 때 뒤로가기를 누르면 기록 중첩 없이 배차판(index.html)으로 즉시 교체 이동
             location.replace('index.html');
         });
 
