@@ -113,8 +113,8 @@
     <div id="app-container">
         <div id="loading-overlay"><div id="loading-text">서버 연결 중...</div></div>
 
-        <div id="modal-overlay" class="modal-overlay-custom" onclick="closeDriverModal()">
-            <div class="modal-card" onclick="event.stopPropagation()">
+        <div id="modal-overlay" class="modal-overlay-custom">
+            <div class="modal-card">
                 <h4>운전원 명단 및 엔진 설정</h4>
                 <p id="modal-date-text"></p>
                 <div style="background: #e8f0fe; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
@@ -193,7 +193,7 @@
                 <span style="font-size: 1.2rem; opacity: 0.8;">⚙️</span>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
-                <button onclick="location.replace('stats.html')" style="background: #6f42c1; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">집계</button>
+                <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">집계</button>
                 <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">로그아웃</button>
             </div>
         </div>
@@ -204,7 +204,7 @@
                     <div class="calendar-header">
                         <span id="month-display" onclick="goToToday()" style="cursor:pointer;" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
                         <div style="display: flex; gap: 4px; align-items: center;">
-                            <button onclick="location.replace('maintenance.html')" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
+                            <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
                             <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
                             <button onclick="changeMonth(-1)">＜</button>
                             <button onclick="changeMonth(1)">＞</button>
@@ -459,13 +459,13 @@
             localStorage.setItem('loggedInUser', id);
             localStorage.setItem('userRole', 'admin');
             localStorage.setItem('loggedInPw', realPw); 
-            window.location.replace('index.html'); 
+            window.location.reload(); 
         }
 
         function logout() {
             localStorage.clear();
             sessionStorage.clear();
-            window.location.replace('index.html');
+            window.location.reload();
         }
 
         function openPwModal() {
@@ -1038,9 +1038,9 @@
             if (!dailyDriverStatus[currentDate]) dailyDriverStatus[currentDate] = {};
 
             if (newStatus === '당직') {
-                dailyDriverStatus[currentDate].manualDuty = driver;
+                dailyDriverStatus[currentDate]._manualDuty = driver;
                 Object.keys(dailyDriverStatus[currentDate]).forEach(k => {
-                    if (!k.startsWith('') && dailyDriverStatus[currentDate][k] === '당직') {
+                    if (!k.startsWith('_') && dailyDriverStatus[currentDate][k] === '당직') {
                         dailyDriverStatus[currentDate][k] = '출근';
                     }
                 });
@@ -1883,96 +1883,34 @@
             }
         };
 
-        // 🚀 [완벽 수정] 닫기 버튼 클릭 시 로그아웃 창이 뜨지 않게 막고, 뒤로가기 시 기록 중첩 없이 동작하는 제어기
+        // ✅ 원래의 심플한 모달 뒤로가기 닫기 코드로 원복 (로그아웃 팝업 없음)
         (function() {
-            let isClosingModalByBtn = false;
-            let userGestureArmed = false;
-
-            function ensureMainGuardOnGesture() {
-                if (!localStorage.getItem('loggedInUser') || userGestureArmed) return;
-                userGestureArmed = true;
-                if (!history.state || (!history.state.isModal && !history.state.isMainGuard)) {
-                    history.pushState({ isMainGuard: true }, '', '');
-                }
-            }
-
-            window.addEventListener('touchstart', ensureMainGuardOnGesture, { passive: true });
-            window.addEventListener('click', ensureMainGuardOnGesture, true);
-
-            const pushModalState = () => {
-                ensureMainGuardOnGesture();
-                if (!history.state || !history.state.isModal) {
-                    history.pushState({ isModal: true }, '', '');
-                }
-            };
-
-            const closeModalWithHistory = (modalId, oriCloseFn) => {
-                const el = document.getElementById(modalId);
-                const wasOpen = el && el.style.display === 'flex';
-                if (oriCloseFn) oriCloseFn();
-                if (wasOpen && history.state && history.state.isModal) {
-                    isClosingModalByBtn = true;
-                    history.back();
-                }
-            };
+            const pushModalState = () => history.pushState({ isModal: true }, '', '');
+            const popModalState = () => { if (history.state && history.state.isModal) history.back(); };
 
             const oriShowDetail = window.showDispatchDetail;
-            window.showDispatchDetail = function(e, id, d) {
-                pushModalState();
-                if (oriShowDetail) oriShowDetail(e, id, d);
-            };
+            window.showDispatchDetail = function(e, id, d) { pushModalState(); if(oriShowDetail) oriShowDetail(e, id, d); };
             const oriCloseDetail = window.closeDetailModal;
-            window.closeDetailModal = function() {
-                closeModalWithHistory('detail-modal-overlay', oriCloseDetail);
-            };
+            window.closeDetailModal = function() { if(oriCloseDetail) oriCloseDetail(); popModalState(); };
 
             const oriOpenPw = window.openPwModal;
-            window.openPwModal = function() {
-                pushModalState();
-                if (oriOpenPw) oriOpenPw();
-            };
+            window.openPwModal = function() { pushModalState(); if(oriOpenPw) oriOpenPw(); };
             const oriClosePw = window.closePwModal;
-            window.closePwModal = function() {
-                closeModalWithHistory('pw-modal-overlay', oriClosePw);
-            };
+            window.closePwModal = function() { if(oriClosePw) oriClosePw(); popModalState(); };
 
-            if (typeof window.openDriverEditModal === 'function') {
+            if(typeof window.openDriverEditModal === 'function') {
                 const oriOpenDriver = window.openDriverEditModal;
-                window.openDriverEditModal = function() {
-                    pushModalState();
-                    oriOpenDriver();
-                };
+                window.openDriverEditModal = function() { pushModalState(); oriOpenDriver(); };
                 const oriCloseDriver = window.closeDriverModal;
-                window.closeDriverModal = function() {
-                    closeModalWithHistory('modal-overlay', oriCloseDriver);
-                };
+                window.closeDriverModal = function() { if(oriCloseDriver) oriCloseDriver(); popModalState(); };
             }
 
             window.addEventListener('popstate', function() {
-                if (isClosingModalByBtn) {
-                    isClosingModalByBtn = false;
-                    return;
-                }
-
                 const modals = ['detail-modal-overlay', 'pw-modal-overlay', 'modal-overlay'];
-                let closedAnyModal = false;
                 modals.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el && el.style.display === 'flex') {
-                        el.style.display = 'none';
-                        closedAnyModal = true;
-                    }
+                    if (el && el.style.display === 'flex') el.style.display = 'none';
                 });
-
-                if (closedAnyModal) return;
-
-                if (localStorage.getItem('loggedInUser')) {
-                    if (confirm('로그아웃 하시겠습니까?')) {
-                        logout();
-                    } else {
-                        history.pushState({ isMainGuard: true }, '', '');
-                    }
-                }
             });
         })();
 
