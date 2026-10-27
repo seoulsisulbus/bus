@@ -269,7 +269,6 @@
                 <div class="card">
                     <div class="calendar-header">
                         <span id="month-display" onclick="goToToday()" style="cursor:pointer;" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
-                        <!-- 정비 & PC버전 버튼 사이즈 고정 -->
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
                             <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
@@ -656,7 +655,14 @@
             });
         }
 
+        // 🚀 [읽기 폭증 방지] 오래된 파일 자동 파기는 하루에 딱 1번만 실행되도록 제한!
         async function cleanUpOldFiles(reservations) {
+            const todayKey = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+            if (localStorage.getItem('lastCleanUpDate') === todayKey) {
+                return; // 오늘 이미 청소했으면 추가 DB 읽기 없이 즉시 종료!
+            }
+            localStorage.setItem('lastCleanUpDate', todayKey);
+
             const limitDate = new Date(_now);
             limitDate.setDate(limitDate.getDate() - 2);
             const limitStr = `${limitDate.getFullYear()}-${String(limitDate.getMonth() + 1).padStart(2, '0')}-${String(limitDate.getDate()).padStart(2, '0')}`;
@@ -774,7 +780,9 @@
                 if (startList) startList.innerHTML = [...startSet].map(val => `<option value="${val}">`).join('');
                 if (endList) endList.innerHTML = [...endSet].map(val => `<option value="${val}">`).join('');
 
-                if (typeof cleanUpOldFiles === 'function') await cleanUpOldFiles(allReservations);
+                if (isInitialLoad && typeof cleanUpOldFiles === 'function') {
+                    cleanUpOldFiles(allReservations);
+                }
 
                 recalculateAll(false); 
                 hideLoading();
@@ -1011,7 +1019,6 @@
             const maxDutyObj = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate() + 14);
             const maxDutyStr = `${maxDutyObj.getFullYear()}-${String(maxDutyObj.getMonth() + 1).padStart(2, '0')}-${String(maxDutyObj.getDate()).padStart(2, '0')}`;
 
-            // 1. 2026-10-22 이전 날짜는 기존에 수동 지정된 당직만 그대로 표시
             Object.keys(dailyDriverStatus).forEach(dateStr => {
                 if (dateStr < anchorDateStr) {
                     const statusData = dailyDriverStatus[dateStr] || {};
@@ -1020,7 +1027,6 @@
                 }
             });
 
-            // 2. 2026-10-22부터 순차 계산
             let cur = new Date(2026, 9, 22);
             const end = new Date(loadedEndStr > maxDutyStr ? loadedEndStr : maxDutyStr);
             let lastDutyDriver = null;
@@ -1034,14 +1040,12 @@
                 const isHoliday = getHolidayName(y, m, d) !== null;
                 const statusData = dailyDriverStatus[dateStr] || {};
 
-                // 주말(파란색/빨간색) 및 공휴일·지정휴일(빨간색)은 당번 제외
                 if (dayOfWeek === 0 || dayOfWeek === 6 || isHoliday) {
                     autoDutyByDate[dateStr] = [];
                     cur.setDate(cur.getDate() + 1);
                     continue;
                 }
 
-                // 오늘 기준 2주(14일)를 넘어가는 미래 날짜는 자동 배정 중지
                 if (dateStr > maxDutyStr) {
                     const manualFuture = statusData._manualDuty ? [statusData._manualDuty] : [];
                     autoDutyByDate[dateStr] = manualFuture;
@@ -1049,7 +1053,6 @@
                     continue;
                 }
 
-                // 해당 날짜의 실제 운행자 파악 (4일전 취소된 배차는 운행자에서 제외 -> 당번 가능!)
                 const dayRes = allReservations.filter(r => (r.dates || []).includes(dateStr));
                 const workingDrivers = new Set();
                 dayRes.forEach(r => {
@@ -1058,7 +1061,6 @@
                     }
                 });
 
-                // 2026-10-28 이전은 기존 당직 기록 유지, 2026-10-29 이후는 새로 수동 지정한(_manualDuty) 경우만 수동 우선 적용
                 let manualDuty = [];
                 if (dateStr <= '2026-10-28') {
                     manualDuty = Object.keys(statusData).filter(drv =>
@@ -1087,7 +1089,6 @@
                         lastDutyDriver = anchorDriver;
                     }
                 } else {
-                    // 일반 평일: 직전 당번의 다음 순번부터 조건에 맞는 첫 번째 운전원 선발
                     const currentList = getEffectiveDriverList(dateStr);
                     let startIndex = 0;
                     if (lastDutyDriver && currentList.includes(lastDutyDriver)) {
@@ -1097,9 +1098,9 @@
                     let picked = null;
                     for (let i = 0; i < currentList.length; i++) {
                         const candidate = currentList[(startIndex + i) % currentList.length];
-                        if (candidate === '함동한') continue; // 함동한 제외
-                        if (getDriverStatus(dateStr, candidate) === '휴무') continue; // 휴무자 제외
-                        if (workingDrivers.has(candidate)) continue; // 당일 실제 운행자 제외 (4일전 취소자는 당번에 포함!)
+                        if (candidate === '함동한') continue;
+                        if (getDriverStatus(dateStr, candidate) === '휴무') continue;
+                        if (workingDrivers.has(candidate)) continue;
 
                         picked = candidate;
                         break;
@@ -1146,7 +1147,6 @@
         function recalculateAll(shouldSaveToDB = true) {
             const originalStateString = JSON.stringify(allReservations);
             allReservations.forEach(r => {
-                // 🚀 4일전 취소된 배차는 취소 당시 배정된 운전원을 고정 기억 (휴무 시에도 다른 배차가 밀리지 않게 보호)
                 if (r.isCanceled && (!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
                     r.canceledDrivers = [...r.assigned];
                 }
@@ -1230,7 +1230,6 @@
                         
                         for (let d of res.dates) {
                             if (getDriverStatus(d, candidate) === '휴무') {
-                                // 🚀 4일전 취소된 배차의 운전원이 취소로 인해 휴무를 쓴 경우, 건너뛰지 않고 자리 유지!
                                 if (res.isCanceled && res.canceledDrivers && res.canceledDrivers.includes(candidate)) {
                                     continue;
                                 }
@@ -1263,7 +1262,9 @@
                 const oldReservations = JSON.parse(originalStateString);
                 allReservations.forEach(res => {
                     const oldRes = oldReservations.find(o => o.id === res.id);
-                    if (!oldRes || JSON.stringify(oldRes) !== JSON.stringify(res)) {
+                    const oldAssigned = JSON.stringify((oldRes && oldRes.assigned) || []);
+                    const newAssigned = JSON.stringify(res.assigned || []);
+                    if (!oldRes || oldAssigned !== newAssigned || oldRes.isCanceled !== res.isCanceled) {
                         db.collection('reservations').doc(res.id).set(res).catch(e=>{});
                     }
                 });
@@ -1285,7 +1286,6 @@
             return dates;
         }
 
-        // 🚀 배차 변동(예약등록/취소/4일전취소) 시 수동 당직 고정을 풀어 자동 당직이 즉시 다시 계산되게 함
         function unlockManualDutyOnDates(dates) {
             (dates || []).forEach(d => {
                 if (dailyDriverStatus[d] && dailyDriverStatus[d]._manualDuty) {
@@ -1337,7 +1337,7 @@
 
             showLoading('예약 등록 중...');
 
-            allReservations.push({
+            const newResObj = {
                 id: docId, startDate: currentDate, dates: dates, vehicle: vehicleName,
                 start: document.getElementById(`start_${vehicleName}`).value || '', 
                 end: document.getElementById(`end_${vehicleName}`).value || '', 
@@ -1351,12 +1351,14 @@
                 nextPointerDriver: nextPointerDriver,
                 photoUrl: photoUrl,
                 settlement: settlement
-            });
+            };
 
+            allReservations.push(newResObj);
             unlockManualDutyOnDates(dates);
             document.getElementById(`v_${vehicleName}`).checked = false;
             document.getElementById(`form_${vehicleName}`).style.display = "none";
             recalculateAll(true); 
+            db.collection('reservations').doc(docId).set(newResObj).catch(e=>{});
             hideLoading();
         }
 
@@ -1901,7 +1903,6 @@
                 
                 if (files.length > 0) {
                     files.forEach((f, idx) => {
-                        // 🚀 신청서 보관함 및 드롭다운에는 파일 이름만 깔끔하게 표시!
                         attachHtml += `
                             <li style="margin-bottom: 5px; display: flex; gap: 5px; align-items: center;">
                                 <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #0056b3; background: #f0f7ff; border: 1px solid #b8daff; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
@@ -2009,7 +2010,27 @@
             }
         };
 
+        // 🚀 휴대폰 뒤로가기 시 팝업 닫기 + 메인화면에서 뒤로가기 시 "로그아웃 하시겠습니까?" 확인창
         (function() {
+            function armBackGuard() {
+                if (!localStorage.getItem('loggedInUser')) return;
+                if (!history.state || (!history.state.isModal && !history.state.isMainGuard)) {
+                    history.pushState({ isMainGuard: true }, '', '');
+                }
+            }
+
+            if (localStorage.getItem('loggedInUser')) {
+                armBackGuard();
+                window.addEventListener('touchstart', function onFirstTouch() {
+                    armBackGuard();
+                    window.removeEventListener('touchstart', onFirstTouch);
+                }, { passive: true });
+                window.addEventListener('click', function onFirstClick() {
+                    armBackGuard();
+                    window.removeEventListener('click', onFirstClick);
+                });
+            }
+
             const pushModalState = () => history.pushState({ isModal: true }, '', '');
             const popModalState = () => { if (history.state && history.state.isModal) history.back(); };
 
@@ -2032,10 +2053,30 @@
 
             window.addEventListener('popstate', function() {
                 const modals = ['detail-modal-overlay', 'pw-modal-overlay', 'modal-overlay'];
+                let closedModal = false;
+
                 modals.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el && el.style.display === 'flex') el.style.display = 'none';
+                    if (el && el.style.display === 'flex') {
+                        el.style.display = 'none';
+                        closedModal = true;
+                    }
                 });
+
+                if (closedModal) {
+                    if (!history.state || !history.state.isMainGuard) {
+                        history.pushState({ isMainGuard: true }, '', '');
+                    }
+                    return;
+                }
+
+                if (localStorage.getItem('loggedInUser')) {
+                    if (confirm('로그아웃 하시겠습니까?')) {
+                        logout();
+                    } else {
+                        history.pushState({ isMainGuard: true }, '', '');
+                    }
+                }
             });
         })();
 
@@ -2082,7 +2123,6 @@
                                 return Math.max(imgData[idx], imgData[idx + 1], imgData[idx + 2]) < 225;
                             };
 
-                            // 1. 상단 영역(5% ~ 45%)에서 표의 가로선 찾기
                             const scanXStart = Math.floor(W * 0.20);
                             const scanXEnd = Math.floor(W * 0.50);
                             const scanWidth = scanXEnd - scanXStart;
@@ -2135,7 +2175,6 @@
                                 return foundX;
                             };
 
-                            // 2. 각 행의 세로 칸막이 위치 분석
                             const candidateRows = [];
                             for (let i = 0; i < yLines.length - 1; i++) {
                                 const yTop = yLines[i];
@@ -2167,7 +2206,6 @@
                                 });
                             }
 
-                            // 3. 첫 번째 본문 표 묶기
                             const groups = [];
                             candidateRows.forEach(r => {
                                 if (groups.length === 0) {
@@ -2193,7 +2231,6 @@
                             let endRow = null;
                             let orgRow = null;
 
-                            // [패턴 A] 일일운행 일보 (성묘지원버스 / 시티투어) -> 단체명 없음(공란)
                             for (let i = 1; i < mainTable.length - 1; i++) {
                                 const prev = mainTable[i - 1];
                                 const cur = mainTable[i];
@@ -2209,7 +2246,6 @@
                                 }
                             }
 
-                            // [패턴 B] 이용신청서 (버스 / 쏠라티) -> 출발지, 목적지 + '단체명 옆 칸' 추출
                             if (!startRow) {
                                 for (let i = 1; i < mainTable.length - 1; i++) {
                                     const prev = mainTable[i - 1];
@@ -2245,7 +2281,6 @@
                                 return;
                             }
 
-                            // 4. 테두리 선만 정확히 지우고 첫 글자는 1픽셀도 잘리지 않게 오려내는 함수
                             const cropValueCell = (row) => {
                                 const rawW = Math.max(10, row.xRight - row.xLeft);
                                 const rawH = Math.max(10, row.yBot - row.yTop);
@@ -2259,7 +2294,6 @@
                                 const tImg = tmpCtx.getImageData(0, 0, rawW, rawH);
                                 const td = tImg.data;
 
-                                // ① 상하 테두리 선 잔상 제거
                                 for (let y = 0; y < Math.min(4, rawH); y++) {
                                     let dark = 0;
                                     for (let x = 0; x < rawW; x++) {
@@ -2287,7 +2321,6 @@
                                     }
                                 }
 
-                                // ② 왼쪽 세로 테두리 선만 흰색 여백이 나올 때까지 제거
                                 const maxLeftScan = Math.min(12, Math.floor(rawW * 0.08));
                                 let cleanLeftX = 0;
                                 for (let x = 0; x < maxLeftScan; x++) {
@@ -2309,7 +2342,6 @@
                                     }
                                 }
 
-                                // ③ 오른쪽 세로 테두리 선 제거
                                 const maxRightScan = Math.min(12, Math.floor(rawW * 0.08));
                                 let cleanRightX = rawW - 1;
                                 for (let x = rawW - 1; x >= rawW - maxRightScan; x--) {
@@ -2331,7 +2363,6 @@
                                     }
                                 }
 
-                                // ④ 글자 선명화
                                 for (let i = 0; i < td.length; i += 4) {
                                     const minC = Math.min(td[i], td[i + 1], td[i + 2]);
                                     const val = minC > 225 ? 255 : minC;
@@ -2340,7 +2371,6 @@
                                 }
                                 tmpCtx.putImageData(tImg, 0, 0);
 
-                                // ⑤ 흰 여백 추가 및 2.5배 확대
                                 const scale = 2.5;
                                 const margin = 30;
                                 const outCanvas = document.createElement('canvas');
@@ -2356,7 +2386,6 @@
                                 return outCanvas;
                             };
 
-                            // 5. 가로줄 전용(PSM 6) 워커로 출발지, 목적지, 단체명 순차 정밀 인식
                             const worker = await getKorOcrWorker();
 
                             const startCanvas = cropValueCell(startRow);
