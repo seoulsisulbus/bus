@@ -16,18 +16,15 @@
         .container { max-width: 1500px; margin: 15px auto; padding: 0 15px; display: flex; flex-direction: column; gap: 16px; }
         .card { background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
 
-        /* 상단 타이틀 & 네비게이션 바 */
         .top-bar { max-width: 1500px; margin: 12px auto 0; padding: 6px 15px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
         .top-title { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; font-weight: 900; color: #155724; }
         .top-user { font-size: 0.85rem; font-weight: 700; color: #555; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; }
 
-        /* 미해결 특이사항 / 검사불합격 글로벌 알림 배너 */
         #global-alert-banner { display: none; background: #fff5f5; border: 2px solid #f5c6cb; border-radius: 10px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(220,53,69,0.08); }
         .alert-banner-title { font-size: 0.95rem; font-weight: 900; color: #dc3545; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
         .alert-banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
         .alert-banner-item { background: #fff; border: 1px solid #f1b0b7; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 
-        /* 달력 상단 헤더 (메인창과 동일한 버튼 사이즈 규격) */
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
         .month-title-box { display: flex; align-items: center; gap: 8px; }
         #current-month-display { font-size: 1.3rem; font-weight: 800; color: #155724; cursor: pointer; }
@@ -37,7 +34,6 @@
         .btn-nav-arrow { padding: 4px 10px; font-size: 1rem; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-family: inherit; }
         .btn-nav-arrow:hover { background: #f1f3f5; }
 
-        /* 달력 그리드 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: 4px; overflow-x: auto; padding-bottom: 6px; }
         .calendar-day-header { font-weight: 800; text-align: center; padding: 8px; background: #eef2f7; border-radius: 4px; font-size: 0.9rem; }
         .calendar-day-header.sun { color: #d9534f; }
@@ -53,7 +49,6 @@
 
         .tag-container { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; flex: 1; width: 100%; }
 
-        /* 달력 내부 배지형 태그 (메인창 스타일) */
         .event-box { display: flex; align-items: center; gap: 4px; padding: 3px 5px; border-radius: 4px; font-size: 0.76rem; letter-spacing: -0.6px; font-weight: 700; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .event-box.routine { background-color: #fff8e1; border: 1px solid #ffecb3; color: #333; }
         .event-box.breakdown { background-color: #fce4ec; border: 1px solid #f8bbd0; color: #b71c1c; }
@@ -68,27 +63,22 @@
         .mini-badge.issue { background: #8e44ad; }
         .mini-badge.inspection { background: #20c997; }
 
-        /* 하단 상세 내역 카드 */
         .detail-header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #28a745; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
         .result-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
         .result-list li { background: #f8f9fa; border: 1px solid #dee2e6; padding: 14px; border-radius: 8px; font-size: 0.92rem; line-height: 1.55; display: flex; flex-direction: column; justify-content: space-between; }
 
-        /* 모달(팝업) 스타일 업그레이드 */
         #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 12px; }
         .modal-content { background: #fff; width: 100%; max-width: 500px; padding: 22px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.22); max-height: 92vh; overflow-y: auto; }
         .modal-title { font-size: 1.15rem; font-weight: 900; margin-bottom: 14px; color: #155724; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* 차량 원터치 칩 그리드 */
         .veh-chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
         .veh-chip { padding: 8px 4px; border: 1px solid #ced4da; background: #f8f9fa; border-radius: 6px; font-size: 0.82rem; font-weight: 800; color: #495057; cursor: pointer; text-align: center; transition: 0.15s; }
         .veh-chip:hover { background: #e9ecef; }
         .veh-chip.active { background: #155724; color: #fff; border-color: #155724; box-shadow: 0 2px 5px rgba(21,87,36,0.25); }
 
-        /* 최근 기록 안내 배지 */
         #recent-record-hint { background: #e8f5e9; border: 1px solid #c3e6cb; color: #155724; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
         .btn-fill-last { background: #28a745; color: #fff; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
 
-        /* 정비 구분 탭 */
         .type-toggle-container { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; background: #f1f3f5; padding: 6px; border-radius: 10px; }
         .type-toggle-row { display: flex; gap: 5px; }
         .type-toggle-row input[type="radio"] { display: none; }
@@ -104,7 +94,6 @@
         .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 7px; font-size: 0.95rem; font-family: inherit; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,0.15); }
 
-        /* 단위(km, %)가 박힌 입력창 */
         .input-unit-wrap { position: relative; display: flex; align-items: center; }
         .input-unit-wrap input { padding-right: 38px; font-weight: 700; }
         .input-unit-wrap .unit-txt { position: absolute; right: 12px; font-size: 0.82rem; font-weight: 800; color: #888; pointer-events: none; }
@@ -112,7 +101,6 @@
         .issue-warning-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 14px; font-size: 0.85rem; display: none; flex-direction: column; gap: 8px; }
         .issue-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 8px 10px; border-radius: 6px; border: 1px solid #f5c6cb; gap: 8px; }
 
-        /* 일일 점검 체크리스트 + 전체 체크 버튼 */
         .checklist-group { background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #e1e4e8; margin-top: 8px; }
         .cl-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding-bottom: 8px; margin-bottom: 10px; }
         .cl-title { color: #0056b3; font-weight: 800; font-size: 0.88rem; }
@@ -153,7 +141,7 @@
     </div>
 
     <div class="container">
-        <!-- 🚨 미해결 특이사항 & 정기검사 불합격 전체 알림 배너 -->
+        <!-- 미해결 특이사항 & 정기검사 불합격 전체 알림 배너 -->
         <div id="global-alert-banner">
             <div class="alert-banner-title">🚨 현재 미해결 차량 경고 (정비 및 재검 요망)</div>
             <div class="alert-banner-grid" id="global-alert-list"></div>
@@ -167,12 +155,12 @@
                     <button class="btn-today-mini" onclick="goToToday()">오늘</button>
                 </div>
 
-                <!-- 정비창 상단 버튼 그룹 (요청하신 컴팩트 사이즈 규격 통일) -->
+                <!-- 정비창 상단 버튼 그룹: location.replace로 기록 중첩 방지 -->
                 <div class="header-action-group">
                     <button onclick="openModalForSelectedDate()" style="background: #ffc107; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">+ 기록추가</button>
                     <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">PC버전</button>
-                    <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">집계</button>
-                    <button onclick="location.href='index.html'" style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">배차판</button>
+                    <button onclick="location.replace('stats.html')" style="background: #6f42c1; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">집계</button>
+                    <button onclick="location.replace('index.html')" style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">배차판</button>
                     <button class="btn-nav-arrow" onclick="changeMonth(-1)">＜</button>
                     <button class="btn-nav-arrow" onclick="changeMonth(1)">＞</button>
                 </div>
@@ -203,7 +191,6 @@
             <input type="hidden" id="m-date">
             <input type="hidden" id="m-doc-id">
 
-            <!-- 차량 원터치 선택 (드롭다운과 동기화) -->
             <div class="form-group" style="margin-bottom:8px;">
                 <label>차량 선택 (터치)</label>
                 <div class="veh-chip-grid" id="veh-chip-container"></div>
@@ -214,13 +201,11 @@
                 </select>
             </div>
 
-            <!-- 선택한 차량의 직전 누적KM / 요소수 안내 바 -->
             <div id="recent-record-hint">
                 <span id="recent-record-text">💡 최근 기록 확인 중...</span>
                 <button type="button" class="btn-fill-last" id="btn-copy-last-km" onclick="copyLastKmToInput()" style="display:none;">최근 KM 입력</button>
             </div>
 
-            <!-- 정비 구분 탭 -->
             <div class="type-toggle-container">
                 <div class="type-toggle-row">
                     <input type="radio" id="type-routine" name="m-type" value="일정비" onchange="toggleFormType()" checked>
@@ -435,7 +420,7 @@
         let isMobileView = true;
         
         let allRecords = []; 
-        let dailyDriverStatus = {}; // 메인 배차판 지정 휴일 연동용
+        let dailyDriverStatus = {};
         let currentUser = localStorage.getItem('loggedInUser') || '관리자';
         let isFirstLoad = true; 
         let lastKnownKm = '';
@@ -444,7 +429,6 @@
             el.value = el.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
-        // 차량 칩 버튼 렌더링 및 클릭 연동
         function initVehicleChips() {
             const container = document.getElementById('veh-chip-container');
             if (!container) return;
@@ -467,7 +451,6 @@
             selectVehicleChip(v);
         }
 
-        // 선택한 차량의 가장 최근 누적 KM 및 요소수 잔량 표시
         function updateRecentVehicleHint(vehicle) {
             const hintText = document.getElementById('recent-record-text');
             const copyBtn = document.getElementById('btn-copy-last-km');
@@ -499,14 +482,12 @@
             else if (document.getElementById('type-inspection').checked) document.getElementById('ip-total').value = lastKnownKm;
         }
 
-        // 일일 점검 6항목 한 번에 전체 체크/해제
         function toggleAllCheckboxes() {
             const chks = Array.from(document.querySelectorAll('.rt-chk'));
             const allChecked = chks.every(c => c.checked);
             chks.forEach(c => c.checked = !allChecked);
         }
 
-        // 정비 업체 '기타 (직접 입력)' 토글
         function toggleCustomShop(prefix) {
             const sel = document.getElementById(`${prefix}-shop`);
             const inp = document.getElementById(`${prefix}-shop-custom`);
@@ -588,7 +569,6 @@
         function loadFromFirebase(year, month) {
             if (unsubscribeLogs) unsubscribeLogs();
             
-            // 이전 달 기록(최근 누적KM 및 미해결 경고 확인용)까지 함께 볼 수 있도록 전월 1일 ~ 당월 말일 로드
             const prevMonthDate = new Date(year, month - 1, 1);
             const startStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
             const endStr = `${year}-${String(month + 1).padStart(2, '0')}-31`;
@@ -637,7 +617,6 @@
             }
         }
 
-        // 달력 상단 전체 미해결 특이사항 / 검사불합격 배너 렌더링
         function renderGlobalAlerts() {
             const banner = document.getElementById('global-alert-banner');
             const listEl = document.getElementById('global-alert-list');
@@ -935,7 +914,7 @@
             checkUnresolvedIssues();
             
             document.getElementById('btn-save-submit').innerText = "📝 수정 저장";
-            history.pushState({ isModal: true }, '', '');
+            pushMaintModalState();
             document.getElementById('modal-overlay').style.display = 'flex';
         }
 
@@ -996,6 +975,28 @@
             .catch(e => alert('오류: ' + e));
         }
 
+        // 🚀 모달 닫기 및 휴대폰 뒤로가기 시 배차판(index.html) 깔끔 복귀 제어
+        let isClosingMaintModalByBtn = false;
+        let subGuardArmed = false;
+
+        function armMaintSubGuard() {
+            if (subGuardArmed) return;
+            subGuardArmed = true;
+            if (!history.state || (!history.state.isSubPage && !history.state.isModal)) {
+                history.pushState({ isSubPage: true }, '', '');
+            }
+        }
+        armMaintSubGuard();
+        window.addEventListener('touchstart', armMaintSubGuard, { passive: true });
+        window.addEventListener('click', armMaintSubGuard, true);
+
+        function pushMaintModalState() {
+            armMaintSubGuard();
+            if (!history.state || !history.state.isModal) {
+                history.pushState({ isModal: true }, '', '');
+            }
+        }
+
         function openModalForSelectedDate() {
             if(!selectedDateStr) {
                 const _now = new Date();
@@ -1027,20 +1028,32 @@
             selectVehicleChip(document.getElementById('m-vehicle').value || '1호차');
             
             document.getElementById('btn-save-submit').innerText = "💾 저장하기";
-            history.pushState({ isModal: true }, '', '');
+            pushMaintModalState();
             document.getElementById('modal-overlay').style.display = 'flex'; 
         }
 
         function closeModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
-            if (history.state && history.state.isModal) history.back();
+            const modal = document.getElementById('modal-overlay');
+            const wasOpen = modal && modal.style.display === 'flex';
+            if (modal) modal.style.display = 'none';
+            if (wasOpen && history.state && history.state.isModal) {
+                isClosingMaintModalByBtn = true;
+                history.back();
+            }
         }
 
         window.addEventListener('popstate', function() {
+            if (isClosingMaintModalByBtn) {
+                isClosingMaintModalByBtn = false;
+                return;
+            }
             const modal = document.getElementById('modal-overlay');
             if (modal && modal.style.display === 'flex') {
                 modal.style.display = 'none';
+                return;
             }
+            // 모달이 안 열려 있을 때 뒤로가기를 누르면 기록 중첩 없이 배차판(index.html)으로 즉시 교체 이동
+            location.replace('index.html');
         });
 
         function toggleFormType() {
