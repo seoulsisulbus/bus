@@ -77,9 +77,9 @@
     <div class="top-bar">
         <h2>📊 배차 · 운행 · 정비 통합 집계</h2>
         <div style="display: flex; gap: 6px; align-items: center;">
-            <button onclick="location.replace('maintenance.html')" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">🔧 정비창</button>
+            <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">🔧 정비창</button>
             <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">PC버전</button>
-            <button class="btn-back" onclick="location.replace('index.html')">📅 배차판</button>
+            <button class="btn-back" onclick="location.href='index.html'">📅 배차판</button>
         </div>
     </div>
 
@@ -1089,7 +1089,6 @@
                         actionOrNext = log.part || '-';
                     }
 
-                    // 콤마(,)를 먼저 제거한 뒤 숫자로 변환하여 48,000 km가 48로 잘리지 않게 처리
                     const rawKm = String(log.total || log.km || '0').replace(/,/g, '');
                     const kmNum = parseInt(rawKm, 10) || 0;
                     const kmText = kmNum > 0 ? `${kmNum.toLocaleString()} km` : '-';
@@ -1156,25 +1155,6 @@
                 isMobileView = true;
             }
         }
-
-        // 휴대폰 뒤로가기 누르면 기록을 쌓지 않고 즉시 배차판(index.html)으로 교체 복귀
-        (function() {
-            let armed = false;
-            function armSubGuard() {
-                if (armed) return;
-                armed = true;
-                if (!history.state || !history.state.isSubPage) {
-                    history.pushState({ isSubPage: true }, '', '');
-                }
-            }
-            armSubGuard();
-            window.addEventListener('touchstart', armSubGuard, { passive: true });
-            window.addEventListener('click', armSubGuard, true);
-
-            window.addEventListener('popstate', function() {
-                location.replace('index.html');
-            });
-        })();
 
         window.onload = () => {
             const savedDate = sessionStorage.getItem('lastSelectedDate');
