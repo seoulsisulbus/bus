@@ -4,36 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
     <title>배차 및 정비 집계 (통합)</title>
-
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f6f9; color: #333; letter-spacing: -0.3px; padding-bottom: 40px; }
-
         .top-bar { max-width: 1400px; margin: 15px auto 0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
         .top-bar h2 { font-size: 1.3rem; color: #2c3e50; font-weight: 800; }
         .btn-back { background: #007bff; color: #fff; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
         .btn-back:hover { background: #0056b3; }
-
         .container { max-width: 1400px; margin: 15px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
         .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-
         .period-control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #007bff; flex-wrap: wrap; gap: 10px; }
         .mode-switch { display: flex; gap: 6px; background: #eef2f7; padding: 4px; border-radius: 8px; }
         .mode-btn { padding: 7px 14px; border: none; border-radius: 6px; font-weight: 800; font-size: 0.9rem; cursor: pointer; background: transparent; color: #555; font-family: inherit; transition: 0.15s; }
         .mode-btn.active { background: #007bff; color: #fff; box-shadow: 0 2px 4px rgba(0,123,255,0.25); }
-
         .period-title { font-size: 1.35rem; font-weight: 800; color: #007bff; cursor: pointer; text-align: center; }
         .period-btns { display: flex; gap: 6px; align-items: center; }
         .period-btns button { padding: 6px 12px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: 1px solid #ced4da; background: #fff; border-radius: 6px; font-family: inherit; }
         .period-btns button:hover { background: #f1f3f5; }
-
         .section-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 12px; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .section-title span.sub { font-size: 0.8rem; color: #007bff; font-weight: 600; }
-
         .table-wrap { width: 100%; overflow-x: auto; }
         table.stats-table { width: 100%; border-collapse: collapse; min-width: 680px; font-size: 0.9rem; text-align: center; }
         table.stats-table th, table.stats-table td { border: 1px solid #dee2e6; padding: 10px 6px; }
@@ -41,7 +33,6 @@
         table.stats-table tbody tr:hover { background: #f8f9fa; }
         table.stats-table tbody tr.my-row { background: #f0f7ff; font-weight: 700; }
         table.stats-table tfoot th, table.stats-table tfoot td { background: #e8f0fe; font-weight: 800; color: #0056b3; }
-
         .driver-name-cell { cursor: pointer; color: #0056b3; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
         .num-zero { color: #ccc; }
         .num-active { font-weight: 700; color: #333; }
@@ -49,21 +40,16 @@
         .num-cancel { color: #adb5bd; font-weight: 600; }
         .num-duty { color: #f29900; font-weight: 800; }
         .num-off { color: #d9534f; font-weight: 700; }
-
-        /* 주단위 근무시간 표 스타일 */
         .week-opt-bar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 10px 14px; border-radius: 8px; border: 1px solid #e1e4e8; margin-bottom: 12px; font-size: 0.85rem; }
         .week-opt-bar label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #333; cursor: pointer; }
         .wk-days { font-weight: 800; color: #0056b3; }
         .wk-hours { font-weight: 800; color: #155724; }
         .wk-warn { color: #f29900; font-weight: 900; }
         .wk-over { color: #dc3545; font-weight: 900; background: #fff5f5; }
-
         #driver-detail-box { display: none; margin-top: 15px; background: #f8f9fa; border: 2px solid #007bff; border-radius: 8px; padding: 15px; }
         #driver-detail-box h4 { color: #007bff; margin-bottom: 10px; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; }
         .detail-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; max-height: 360px; overflow-y: auto; }
         .detail-list li { background: #fff; border: 1px solid #dee2e6; padding: 10px; border-radius: 6px; font-size: 0.88rem; line-height: 1.5; }
-
-        /* 정비 집계 전용 스타일 */
         .maint-summary-boxes { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .maint-badge-card { flex: 1; min-width: 140px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; text-align: center; }
         .maint-badge-card .label { font-size: 0.85rem; color: #666; font-weight: 700; margin-bottom: 4px; }
@@ -72,9 +58,7 @@
         .type-tag.repair { background: #dc3545; }
         .type-tag.prev { background: #007bff; }
         .type-tag.insp { background: #28a745; }
-
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: 700; color: #007bff; }
-
         @media (max-width: 768px) {
             .top-bar { padding: 10px 12px; }
             .container { padding: 0 10px; gap: 12px; }
@@ -90,7 +74,6 @@
 <body>
     <div id="loading-overlay"><div id="loading-text">집계 데이터 계산 중...</div></div>
 
-    <!-- 상단 바: location.replace를 사용하여 달력창 기록이 중복으로 쌓이지 않게 처리 -->
     <div class="top-bar">
         <h2>📊 배차 · 운행 · 정비 통합 집계</h2>
         <div style="display: flex; gap: 6px; align-items: center;">
@@ -101,16 +84,13 @@
     </div>
 
     <div class="container">
-        <!-- 1. 상단 기간(월별/년별) 제어 및 운전원별 집계 카드 -->
         <div class="card">
             <div class="period-control-bar">
                 <div class="mode-switch">
                     <button id="mode-month-btn" class="mode-btn active" onclick="setStatsMode('month')">📅 월별 보기</button>
                     <button id="mode-year-btn" class="mode-btn" onclick="setStatsMode('year')">📊 년별(연간) 보기</button>
                 </div>
-
                 <span class="period-title" id="period-display" onclick="goToCurrentPeriod()" title="클릭하면 현재 달/연도로 이동합니다">2026년 10월 집계</span>
-
                 <div class="period-btns">
                     <button id="btn-prev-period" onclick="changePeriod(-1)">＜ 이전 달</button>
                     <button id="btn-curr-period" onclick="goToCurrentPeriod()" style="background:#e8f0fe; color:#0056b3; border-color:#b6d4fe;">이번 달</button>
@@ -145,7 +125,6 @@
                 </table>
             </div>
 
-            <!-- 운전원 클릭 시 상세 내역 표시 영역 -->
             <div id="driver-detail-box">
                 <h4>
                     <span id="driver-detail-title">상세 운행 내역</span>
@@ -155,7 +134,6 @@
             </div>
         </div>
 
-        <!-- 2. 주단위(월~일) 근무일수 및 순수 근무시간 집계 카드 -->
         <div class="card" id="weekly-stats-card">
             <div class="section-title">
                 <span>⏱️ 주간별(월~일) 근무일수 및 순수 근무시간 집계</span>
@@ -185,7 +163,6 @@
             </div>
         </div>
 
-        <!-- 3. 차량별 운행 집계 카드 -->
         <div class="card">
             <div class="section-title">
                 <span>🚌 차량별 운행 집계</span>
@@ -212,7 +189,6 @@
             </div>
         </div>
 
-        <!-- 4. 차량 정비 및 정기검사 집계 카드 (vehicle_logs 연동) -->
         <div class="card">
             <div class="section-title" style="border-bottom: 2px solid #28a745; padding-bottom: 10px;">
                 <span>🔧 차량별 주요 정비 및 정기검사 집계</span>
@@ -1113,6 +1089,7 @@
                         actionOrNext = log.part || '-';
                     }
 
+                    // 콤마(,)를 먼저 제거한 뒤 숫자로 변환하여 48,000 km가 48로 잘리지 않게 처리
                     const rawKm = String(log.total || log.km || '0').replace(/,/g, '');
                     const kmNum = parseInt(rawKm, 10) || 0;
                     const kmText = kmNum > 0 ? `${kmNum.toLocaleString()} km` : '-';
@@ -1180,7 +1157,7 @@
             }
         }
 
-        // 🚀 휴대폰 뒤로가기 누르면 기록을 쌓지 않고 즉시 배차판(index.html)으로 교체 복귀
+        // 휴대폰 뒤로가기 누르면 기록을 쌓지 않고 즉시 배차판(index.html)으로 교체 복귀
         (function() {
             let armed = false;
             function armSubGuard() {
