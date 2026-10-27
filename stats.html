@@ -218,7 +218,6 @@
                 <span class="sub" id="maint-period-sub" style="color:#155724;">고장수리 · 예방정비 · 정기검사 이력</span>
             </div>
 
-            <!-- 정비 건수 요약 배지 -->
             <div class="maint-summary-boxes">
                 <div class="maint-badge-card">
                     <div class="label">총 정비·검사 건수</div>
@@ -238,7 +237,6 @@
                 </div>
             </div>
 
-            <!-- 정비 상세 내역 표 -->
             <div class="table-wrap">
                 <table class="stats-table" style="min-width: 720px;">
                     <thead>
@@ -269,6 +267,11 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+
+        // 🚀 [읽기 절감 핵심 1] 로컬 캐시 활성화 (배차판/정비창에서 이미 읽은 문서는 캐시에서 즉시 로드)
+        db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+            console.log("캐시 활성화 실패:", err);
+        });
 
         const koreaHolidays = {
             "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일", 
@@ -302,10 +305,7 @@
 
         let loadedStartStr = '';
         let loadedEndStr = '';
-        let unsubRes = null;
-        let unsubLogs = null;
-        let unsubStatus = null;
-        let unsubMod = null;
+        let baseDataLoaded = false;
 
         function getHolidayName(year, month, day) {
             const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -339,7 +339,6 @@
             return dailyDriverStatus[date][driver] || '출근';
         }
 
-        // 메인창(index.html)과 100% 동일한 당번(당직) 자동 순환 엔진
         function calculateAutoDuty() {
             autoDutyByDate = {};
             if (!loadedStartStr || !loadedEndStr) return;
@@ -450,7 +449,6 @@
             }
         }
 
-        // 메인창(index.html)과 100% 동일한 배차 계산 엔진
         function recalculateAll() {
             allReservations.forEach(r => {
                 if (r.isCanceled && (!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
@@ -585,61 +583,61 @@
             }
         }
 
-        function loadFromFirebase() {
+        // 🚀 [읽기 절감 핵심 2] 실시간 리스너(onSnapshot) 대신 필요한 순간에만 1회성(.get())으로 읽어 리스너 폭증 방지
+        async function loadFromFirebase() {
             document.getElementById('loading-overlay').style.display = 'flex';
             ensureRangeForCurrentView();
 
-            if (unsubRes) unsubRes();
-            if (unsubLogs) unsubLogs();
+            try {
+                const promises = [
+                    db.collection('reservations')
+                      .where("startDate", ">=", loadedStartStr)
+                      .where("startDate", "<=", loadedEndStr)
+                      .get(),
+                    db.collection('vehicle_logs')
+                      .where("date", ">=", loadedStartStr)
+                      .where("date", "<=", loadedEndStr)
+                      .get()
+                ];
 
-            unsubRes = db.collection('reservations')
-                         .where("startDate", ">=", loadedStartStr)
-                         .where("startDate", "<=", loadedEndStr)
-                         .onSnapshot(snapshot => {
+                // daily_status와 driver_modifiers는 처음 열 때 딱 1번만 불러오고 재사용
+                if (!baseDataLoaded) {
+                    promises.push(db.collection('daily_status').get());
+                    promises.push(db.collection('driver_modifiers').get());
+                }
+
+                const results = await Promise.all(promises);
+
                 allReservations = [];
-                snapshot.forEach(doc => {
+                results[0].forEach(doc => {
                     const d = doc.data(); d.id = doc.id;
                     allReservations.push(d);
                 });
-                recalculateAll();
-                document.getElementById('loading-overlay').style.display = 'none';
-            }, err => {
-                console.error(err);
-                document.getElementById('loading-overlay').style.display = 'none';
-            });
 
-            unsubLogs = db.collection('vehicle_logs')
-                          .where("date", ">=", loadedStartStr)
-                          .where("date", "<=", loadedEndStr)
-                          .onSnapshot(snapshot => {
                 allVehicleLogs = [];
-                snapshot.forEach(doc => {
+                results[1].forEach(doc => {
                     const d = doc.data(); d.id = doc.id;
                     allVehicleLogs.push(d);
                 });
-                renderMaintenanceStats();
-            }, err => {
-                console.error("정비 데이터 수신 오류:", err);
-            });
 
-            if (!unsubStatus) {
-                unsubStatus = db.collection('daily_status').onSnapshot(snapshot => {
+                if (!baseDataLoaded && results[2] && results[3]) {
                     dailyDriverStatus = {};
-                    snapshot.forEach(doc => { dailyDriverStatus[doc.id] = doc.data(); });
-                    recalculateAll();
-                });
-            }
+                    results[2].forEach(doc => { dailyDriverStatus[doc.id] = doc.data(); });
 
-            if (!unsubMod) {
-                unsubMod = db.collection('driver_modifiers').onSnapshot(snapshot => {
                     driverListModifiers = {};
                     engineModifiers = {};
-                    snapshot.forEach(doc => {
+                    results[3].forEach(doc => {
                         driverListModifiers[doc.id] = doc.data().list;
                         engineModifiers[doc.id] = doc.data().useEngineB || false;
                     });
-                    recalculateAll();
-                });
+                    baseDataLoaded = true;
+                }
+
+                recalculateAll();
+            } catch (err) {
+                console.error("집계 데이터 로드 오류:", err);
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
             }
         }
 
@@ -699,7 +697,6 @@
             return val === 0 ? `<span class="num-zero">0</span>` : `<span class="${activeClass}">${val}</span>`;
         }
 
-        // 🚀 [핵심] 휴게시간(1시간)만 빼고 할증 배율(1.5x/2.0x)은 적용하지 않는 순수 근무시간 계산 함수
         function calculatePureWorkHours(clockInStr, clockOutStr, type) {
             if (!clockInStr || !clockOutStr) return null;
             let inT = parseFloat(clockInStr);
@@ -711,10 +708,8 @@
 
             let breakHours = 0;
             if (type && (type.includes('시티투어(야)') || type.includes('시티(야)'))) {
-                // 야간 시티투어: 5시간 이상 근무 시 휴게 1시간 차감
                 if (rawDuration >= 5) breakHours = 1;
             } else {
-                // 일반 운행: 점심시간(12~13시)을 포함하거나 4시간 이상 근무 시 휴게 1시간 차감
                 if ((inT <= 12 && outT >= 13) || rawDuration >= 4) {
                     breakHours = 1;
                 }
@@ -724,12 +719,10 @@
             return Math.round(pure * 100) / 100;
         }
 
-        // 🚀 선택된 월의 월요일~일요일 주간 구간 목록 생성 함수
         function getWeeksForMonth(year, monthIndex) {
             const firstOfMonth = new Date(year, monthIndex, 1);
             const lastOfMonth = new Date(year, monthIndex + 1, 0);
 
-            // 첫 날이 속한 주의 월요일 찾기 (일요일(0)이면 -6일, 그 외 1 - dayOfWeek)
             const firstDayOfWeek = firstOfMonth.getDay();
             const diffToMon = firstDayOfWeek === 0 ? -6 : 1 - firstDayOfWeek;
             let curMon = new Date(year, monthIndex, 1 + diffToMon);
@@ -760,12 +753,10 @@
             return weeks;
         }
 
-        // 🚀 주단위(월~일) 근무일수 및 순수 근무시간 렌더링 함수
         function renderWeeklyWorkStats() {
             const card = document.getElementById('weekly-stats-card');
             if (!card) return;
 
-            // 연간 보기 모드일 때는 주간표 대신 안내 표시 또는 현재 월 기준 표시
             const weeks = getWeeksForMonth(currentYear, currentMonth);
             const refEndDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(new Date(currentYear, currentMonth + 1, 0).getDate()).padStart(2, '0')}`;
             const targetDrivers = getEffectiveDriverList(refEndDate);
@@ -774,7 +765,6 @@
             const useDefault8h = document.getElementById('opt-unentered-8h') && document.getElementById('opt-unentered-8h').checked;
             const includeDuty = document.getElementById('opt-include-duty') && document.getElementById('opt-include-duty').checked;
 
-            // 헤더 생성
             const thead = document.getElementById('weekly-stats-thead');
             let headHtml = `<tr><th rowspan="2" style="min-width:75px;">운전원</th>`;
             weeks.forEach(w => {
@@ -787,7 +777,6 @@
             headHtml += `</tr>`;
             thead.innerHTML = headHtml;
 
-            // 운전원별 x 주차별 계산
             const tbody = document.getElementById('weekly-stats-tbody');
             const tfoot = document.getElementById('weekly-stats-tfoot');
             let bodyHtml = '';
@@ -808,7 +797,6 @@
                     let wHours = 0;
 
                     w.dates.forEach(dateStr => {
-                        // 해당 날짜에 이 운전원이 배정된 유효(미취소) 배차 찾기
                         const activeRes = allReservations.filter(r => !r.isCanceled && (r.dates || []).includes(dateStr) && (r.assigned || []).includes(drv));
 
                         if (activeRes.length > 0) {
@@ -858,7 +846,6 @@
 
             tbody.innerHTML = bodyHtml;
 
-            // 하단 주차별 합계
             let footHtml = `<tr><th>주차별 합계</th>`;
             weekTotals.forEach(wt => {
                 const hDisp = Number.isInteger(wt.hours) ? wt.hours : wt.hours.toFixed(1);
@@ -897,7 +884,6 @@
                 };
             });
 
-            // 1. 해당 기간의 당직 및 휴무 집계
             Object.keys(autoDutyByDate).forEach(dateStr => {
                 if (dateStr.startsWith(prefix)) {
                     (autoDutyByDate[dateStr] || []).forEach(drv => {
@@ -917,13 +903,11 @@
                 }
             });
 
-            // 2. 차량별 집계 초기화
             const vehStats = {};
             allVehicles.forEach(v => {
                 vehStats[v] = { pubSeoul: 0, night1: 0, night2: 0, grave: 0, cityEtc: 0, totalActive: 0, canceled: 0 };
             });
 
-            // 3. 예약 내역 순회하며 운전원별 & 차량별 집계 (1박/2박은 횟수 +1, 실운행 합계는 일수 +2/+3)
             allReservations.forEach(r => {
                 const isStartInPeriod = (r.startDate || '').startsWith(prefix);
                 if (!isStartInPeriod) return;
@@ -934,7 +918,6 @@
                     ? r.dates.length
                     : (t.includes('2박') ? 3 : (t.includes('1박') ? 2 : 1));
 
-                // 차량별 집계
                 if (vehStats[v]) {
                     if (r.isCanceled) {
                         vehStats[v].canceled += 1;
@@ -948,7 +931,6 @@
                     }
                 }
 
-                // 운전원별 집계
                 (r.assigned || []).forEach(drv => {
                     if (!driverStats[drv]) return;
                     const st = driverStats[drv];
@@ -978,7 +960,6 @@
                 });
             });
 
-            // 운전원 표 렌더링
             const dTbody = document.getElementById('driver-stats-tbody');
             const dTfoot = document.getElementById('driver-stats-tfoot');
             let dHtml = '';
@@ -1027,7 +1008,6 @@
 
             window._currentDriverStats = driverStats;
 
-            // 차량 표 렌더링
             const vTbody = document.getElementById('vehicle-stats-tbody');
             const vTfoot = document.getElementById('vehicle-stats-tfoot');
             let vHtml = '';
@@ -1069,12 +1049,11 @@
                     <td>${vSum.canceled}</td>
                 </tr>`;
 
-            // 주간별(월~일) 근무일수 및 순수 근무시간 렌더링 호출
             renderWeeklyWorkStats();
             renderMaintenanceStats();
         }
 
-        // 차량별 주요 정비 및 정기검사 집계 렌더링 함수 (vehicle_logs 연동)
+        // 🚀 차량별 주요 정비 및 정기검사 집계 렌더링 함수 (콤마 제거 후 숫자 변환하여 48,000 km 정상 표시)
         function renderMaintenanceStats() {
             const isYear = (statsMode === 'year');
             const prefix = isYear
@@ -1136,6 +1115,7 @@
                         actionOrNext = log.part || '-';
                     }
 
+                    // ✅ 콤마(,)를 먼저 제거한 뒤 숫자로 변환하여 48,000 km가 48로 잘리지 않게 처리
                     const rawKm = String(log.total || log.km || '0').replace(/,/g, '');
                     const kmNum = parseInt(rawKm, 10) || 0;
                     const kmText = kmNum > 0 ? `${kmNum.toLocaleString()} km` : '-';
