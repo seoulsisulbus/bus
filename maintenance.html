@@ -7,37 +7,29 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f6f9; color: #333; letter-spacing: -0.3px; padding-bottom: 40px; }
-
         .container { max-width: 1500px; margin: 15px auto; padding: 0 15px; display: flex; flex-direction: column; gap: 16px; }
         .card { background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-
         .top-bar { max-width: 1500px; margin: 12px auto 0; padding: 6px 15px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
         .top-title { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; font-weight: 900; color: #155724; }
         .top-user { font-size: 0.85rem; font-weight: 700; color: #555; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; }
-
         #global-alert-banner { display: none; background: #fff5f5; border: 2px solid #f5c6cb; border-radius: 10px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(220,53,69,0.08); }
         .alert-banner-title { font-size: 0.95rem; font-weight: 900; color: #dc3545; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
         .alert-banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
         .alert-banner-item { background: #fff; border: 1px solid #f1b0b7; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
         .month-title-box { display: flex; align-items: center; gap: 8px; }
         #current-month-display { font-size: 1.3rem; font-weight: 800; color: #155724; cursor: pointer; }
         .btn-today-mini { background: #e8f5e9; color: #155724; border: 1px solid #c3e6cb; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
-        
         .header-action-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
         .btn-nav-arrow { padding: 4px 10px; font-size: 1rem; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-family: inherit; }
         .btn-nav-arrow:hover { background: #f1f3f5; }
-
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: 4px; overflow-x: auto; padding-bottom: 6px; }
         .calendar-day-header { font-weight: 800; text-align: center; padding: 8px; background: #eef2f7; border-radius: 4px; font-size: 0.9rem; }
         .calendar-day-header.sun { color: #d9534f; }
         .calendar-day-header.sat { color: #0275d8; }
-
         .calendar-cell { min-width: 0; min-height: 155px; background: #fff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 4px; font-size: 1.05rem; cursor: pointer; display: flex; flex-direction: column; transition: 0.15s; position: relative; }
         .calendar-cell:hover { background: #f8fdf9; border-color: #28a745; }
         .calendar-cell.selected { border: 2px solid #28a745; background: #f0fdf4; }
@@ -45,39 +37,31 @@
         .calendar-cell.sat .date-num { color: #0275d8; font-weight: 800; }
         .calendar-cell.holiday .date-num { color: #d9534f !important; font-weight: 800; }
         .holiday-name { font-size: 0.75rem; color: #d9534f; font-weight: 700; letter-spacing: -0.5px; text-align: right; word-break: keep-all; margin-left: 4px; }
-
         .tag-container { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; flex: 1; width: 100%; }
-
         .event-box { display: flex; align-items: center; gap: 4px; padding: 3px 5px; border-radius: 4px; font-size: 0.76rem; letter-spacing: -0.6px; font-weight: 700; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .event-box.routine { background-color: #fff8e1; border: 1px solid #ffecb3; color: #333; }
         .event-box.breakdown { background-color: #fce4ec; border: 1px solid #f8bbd0; color: #b71c1c; }
         .event-box.preventive { background-color: #e8f0fe; border: 1px solid #c6dafc; color: #0d47a1; }
         .event-box.issue { background-color: #f3e5f5; border: 1px solid #e1bee7; color: #4a148c; }
         .event-box.inspection { background-color: #e6fcf5; border: 1px solid #96f2d7; color: #087f5b; }
-
         .mini-badge { padding: 1px 4px; border-radius: 3px; font-size: 0.62rem; font-weight: 800; color: #fff; flex-shrink: 0; }
         .mini-badge.routine { background: #fd7e14; }
         .mini-badge.breakdown { background: #dc3545; }
         .mini-badge.preventive { background: #007bff; }
         .mini-badge.issue { background: #8e44ad; }
         .mini-badge.inspection { background: #20c997; }
-
         .detail-header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #28a745; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
         .result-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
         .result-list li { background: #f8f9fa; border: 1px solid #dee2e6; padding: 14px; border-radius: 8px; font-size: 0.92rem; line-height: 1.55; display: flex; flex-direction: column; justify-content: space-between; }
-
         #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 12px; }
         .modal-content { background: #fff; width: 100%; max-width: 500px; padding: 22px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.22); max-height: 92vh; overflow-y: auto; }
         .modal-title { font-size: 1.15rem; font-weight: 900; margin-bottom: 14px; color: #155724; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-
         .veh-chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
         .veh-chip { padding: 8px 4px; border: 1px solid #ced4da; background: #f8f9fa; border-radius: 6px; font-size: 0.82rem; font-weight: 800; color: #495057; cursor: pointer; text-align: center; transition: 0.15s; }
         .veh-chip:hover { background: #e9ecef; }
         .veh-chip.active { background: #155724; color: #fff; border-color: #155724; box-shadow: 0 2px 5px rgba(21,87,36,0.25); }
-
         #recent-record-hint { background: #e8f5e9; border: 1px solid #c3e6cb; color: #155724; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
         .btn-fill-last { background: #28a745; color: #fff; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
-
         .type-toggle-container { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; background: #f1f3f5; padding: 6px; border-radius: 10px; }
         .type-toggle-row { display: flex; gap: 5px; }
         .type-toggle-row input[type="radio"] { display: none; }
@@ -87,19 +71,15 @@
         .type-toggle-row input[type="radio"]:checked + label.preventive { background: #007bff; color: #fff; border-color: #007bff; box-shadow: 0 2px 6px rgba(0,123,255,0.3); }
         .type-toggle-row input[type="radio"]:checked + label.inspection { background: #20c997; color: #fff; border-color: #20c997; box-shadow: 0 2px 6px rgba(32,201,151,0.3); }
         .type-toggle-row input[type="radio"]:checked + label.issue { background: #8e44ad; color: #fff; border-color: #8e44ad; box-shadow: 0 2px 6px rgba(142,68,173,0.3); }
-
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #444; }
         .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 7px; font-size: 0.95rem; font-family: inherit; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,0.15); }
-
         .input-unit-wrap { position: relative; display: flex; align-items: center; }
         .input-unit-wrap input { padding-right: 38px; font-weight: 700; }
         .input-unit-wrap .unit-txt { position: absolute; right: 12px; font-size: 0.82rem; font-weight: 800; color: #888; pointer-events: none; }
-
         .issue-warning-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 14px; font-size: 0.85rem; display: none; flex-direction: column; gap: 8px; }
         .issue-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 8px 10px; border-radius: 6px; border: 1px solid #f5c6cb; gap: 8px; }
-
         .checklist-group { background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #e1e4e8; margin-top: 8px; }
         .cl-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding-bottom: 8px; margin-bottom: 10px; }
         .cl-title { color: #0056b3; font-weight: 800; font-size: 0.88rem; }
@@ -108,15 +88,12 @@
         .checklist-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #fff; border: 1px solid #e9ecef; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: 0.1s; }
         .checklist-item:hover { border-color: #fd7e14; }
         .checklist-item input { width: 18px; height: 18px; cursor: pointer; accent-color: #fd7e14; flex-shrink: 0; }
-
         .modal-btns { display: flex; gap: 10px; margin-top: 18px; }
         .btn-save { flex: 1.3; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; }
         .btn-cancel { flex: 0.7; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; }
-
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1.15rem; font-weight: 800; color: #28a745; transition: opacity 0.3s; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #28a745; border-radius: 50%; width: 38px; height: 38px; animation: spin 1s linear infinite; margin-bottom: 12px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         @media (max-width: 768px) {
             .container { padding: 0 10px; margin: 10px auto; }
             .card { padding: 14px; }
@@ -154,8 +131,8 @@
                 <div class="header-action-group">
                     <button onclick="openModalForSelectedDate()" style="background: #ffc107; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">+ 기록추가</button>
                     <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">PC버전</button>
-                    <button onclick="location.replace('stats.html')" style="background: #6f42c1; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">집계</button>
-                    <button onclick="location.replace('index.html')" style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">배차판</button>
+                    <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">집계</button>
+                    <button onclick="location.href='index.html'" style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">배차판</button>
                     <button class="btn-nav-arrow" onclick="changeMonth(-1)">＜</button>
                     <button class="btn-nav-arrow" onclick="changeMonth(1)">＞</button>
                 </div>
@@ -304,12 +281,10 @@
                         <option value="불합격">불합격</option>
                     </select>
                 </div>
-                
                 <div class="form-group" id="ip-reason-group" style="display: none; background: #fff5f5; padding: 10px; border: 1px dashed #dc3545; border-radius: 6px;">
                     <label style="color: #dc3545;">🚨 불합격 사유 (필수)</label>
                     <input type="text" id="ip-reason" placeholder="예: 제동미달, 매연초과" style="border-color: #dc3545;">
                 </div>
-
                 <div class="form-group">
                     <label>다음 검사 예정일 (만료일)</label>
                     <input type="date" id="ip-next-date">
@@ -480,7 +455,7 @@
             const sel = document.getElementById(`${prefix}-shop`);
             const inp = document.getElementById(`${prefix}-shop-custom`);
             if (!sel || !inp) return;
-            if (sel.value === 'custom') {
+            if (sel.value === '__custom__') {
                 inp.style.display = 'block';
                 inp.focus();
             } else {
@@ -502,7 +477,7 @@
                 inp.style.display = 'none';
                 inp.value = '';
             } else {
-                sel.value = 'custom';
+                sel.value = '__custom__';
                 inp.style.display = 'block';
                 inp.value = shopVal;
             }
@@ -512,7 +487,7 @@
             const sel = document.getElementById(`${prefix}-shop`);
             const inp = document.getElementById(`${prefix}-shop-custom`);
             if (!sel) return '';
-            if (sel.value === 'custom') return (inp ? inp.value.trim() : '');
+            if (sel.value === '__custom__') return (inp ? inp.value.trim() : '');
             return sel.value;
         }
 
@@ -902,7 +877,7 @@
             checkUnresolvedIssues();
             
             document.getElementById('btn-save-submit').innerText = "📝 수정 저장";
-            pushMaintModalState();
+            history.pushState({ isModal: true }, '', '');
             document.getElementById('modal-overlay').style.display = 'flex';
         }
 
@@ -963,28 +938,6 @@
             .catch(e => alert('오류: ' + e));
         }
 
-        // 🚀 모달 닫기 및 휴대폰 뒤로가기 시 배차판(index.html) 깔끔 복귀 제어
-        let isClosingMaintModalByBtn = false;
-        let subGuardArmed = false;
-
-        function armMaintSubGuard() {
-            if (subGuardArmed) return;
-            subGuardArmed = true;
-            if (!history.state || (!history.state.isSubPage && !history.state.isModal)) {
-                history.pushState({ isSubPage: true }, '', '');
-            }
-        }
-        armMaintSubGuard();
-        window.addEventListener('touchstart', armMaintSubGuard, { passive: true });
-        window.addEventListener('click', armMaintSubGuard, true);
-
-        function pushMaintModalState() {
-            armMaintSubGuard();
-            if (!history.state || !history.state.isModal) {
-                history.pushState({ isModal: true }, '', '');
-            }
-        }
-
         function openModalForSelectedDate() {
             if(!selectedDateStr) {
                 const _now = new Date();
@@ -1016,31 +969,21 @@
             selectVehicleChip(document.getElementById('m-vehicle').value || '1호차');
             
             document.getElementById('btn-save-submit').innerText = "💾 저장하기";
-            pushMaintModalState();
+            history.pushState({ isModal: true }, '', '');
             document.getElementById('modal-overlay').style.display = 'flex'; 
         }
 
+        // ✅ 원래의 기본 모달 닫기 및 뒤로가기 코드로 원복
         function closeModal() {
-            const modal = document.getElementById('modal-overlay');
-            const wasOpen = modal && modal.style.display === 'flex';
-            if (modal) modal.style.display = 'none';
-            if (wasOpen && history.state && history.state.isModal) {
-                isClosingMaintModalByBtn = true;
-                history.back();
-            }
+            document.getElementById('modal-overlay').style.display = 'none';
+            if (history.state && history.state.isModal) history.back();
         }
 
         window.addEventListener('popstate', function() {
-            if (isClosingMaintModalByBtn) {
-                isClosingMaintModalByBtn = false;
-                return;
-            }
             const modal = document.getElementById('modal-overlay');
             if (modal && modal.style.display === 'flex') {
                 modal.style.display = 'none';
-                return;
             }
-            location.replace('index.html');
         });
 
         function toggleFormType() {
