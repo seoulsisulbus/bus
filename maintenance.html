@@ -9,94 +9,154 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f6f9; color: #333; letter-spacing: -0.3px; padding-bottom: 40px; }
-        .container { max-width: 1500px; margin: 15px auto; padding: 0 15px; display: flex; flex-direction: column; gap: 16px; }
-        .card { background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-        .top-bar { max-width: 1500px; margin: 12px auto 0; padding: 6px 15px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .top-title { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; font-weight: 900; color: #155724; }
-        .top-user { font-size: 0.85rem; font-weight: 700; color: #555; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; }
-        #global-alert-banner { display: none; background: #fff5f5; border: 2px solid #f5c6cb; border-radius: 10px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(220,53,69,0.08); }
-        .alert-banner-title { font-size: 0.95rem; font-weight: 900; color: #dc3545; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f1f5f9; color: #1e293b; letter-spacing: -0.3px; padding-bottom: 40px; }
+
+        /* 상단 통합 네비게이션 바 (모바일 1줄 고정) */
+        .top-navbar { max-width: 1500px; margin: 10px auto 0; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: nowrap; }
+        .top-title-group { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+        .top-title { font-size: 1.1rem; font-weight: 900; color: #0f172a; white-space: nowrap; }
+        .top-user { font-size: 0.8rem; font-weight: 800; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+        .top-nav-btns { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; }
+        .nav-pill-btn { border: none; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 0.82rem; line-height: 1.2; cursor: pointer; white-space: nowrap; transition: 0.15s; font-family: inherit; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+        .nav-pill-btn.stats { background: #6366f1; color: #fff; }
+        .nav-pill-btn.dispatch { background: #2563eb; color: #fff; }
+        .nav-pill-btn:hover { filter: brightness(0.93); }
+
+        .container { max-width: 1500px; margin: 12px auto 25px; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+        .card { background: #fff; padding: 18px; border-radius: 14px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); border: 1px solid #e2e8f0; }
+
+        /* 미해결 경고 배너 */
+        #global-alert-banner { display: none; background: #fff1f2; border: 1.5px solid #fecdd3; border-left: 5px solid #e11d48; border-radius: 12px; padding: 14px 16px; box-shadow: 0 4px 12px rgba(225,29,72,0.08); }
+        .alert-banner-title { font-size: 0.95rem; font-weight: 900; color: #be123c; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
         .alert-banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
-        .alert-banner-item { background: #fff; border: 1px solid #f1b0b7; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-        .month-title-box { display: flex; align-items: center; gap: 8px; }
-        #current-month-display { font-size: 1.3rem; font-weight: 800; color: #155724; cursor: pointer; }
-        .btn-today-mini { background: #e8f5e9; color: #155724; border: 1px solid #c3e6cb; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
-        .header-action-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-        .btn-nav-arrow { padding: 4px 10px; font-size: 1rem; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-family: inherit; }
-        .btn-nav-arrow:hover { background: #f1f3f5; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: 4px; overflow-x: auto; padding-bottom: 6px; }
-        .calendar-day-header { font-weight: 800; text-align: center; padding: 8px; background: #eef2f7; border-radius: 4px; font-size: 0.9rem; }
-        .calendar-day-header.sun { color: #d9534f; }
-        .calendar-day-header.sat { color: #0275d8; }
-        .calendar-cell { min-width: 0; min-height: 155px; background: #fff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 4px; font-size: 1.05rem; cursor: pointer; display: flex; flex-direction: column; transition: 0.15s; position: relative; }
-        .calendar-cell:hover { background: #f8fdf9; border-color: #28a745; }
-        .calendar-cell.selected { border: 2px solid #28a745; background: #f0fdf4; }
+        .alert-banner-item { background: #fff; border: 1px solid #fecdd3; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+        /* 달력 헤더 (모바일 1줄 고정, 줄바꿈 방지) */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 6px; flex-wrap: nowrap; }
+        .month-title-box { display: flex; align-items: center; gap: 6px; white-space: nowrap; min-width: 0; }
+        #current-month-display { font-size: 1.25rem; font-weight: 900; color: #0f172a; cursor: pointer; letter-spacing: -0.5px; white-space: nowrap; }
+        .btn-today-mini { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
+        
+        .header-action-group { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; }
+        .header-action-group button { padding: 5px 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; border-radius: 6px; font-family: inherit; white-space: nowrap; line-height: 1.1; }
+        .btn-add-top { background: #10b981; color: #fff; border: none; box-shadow: 0 1px 2px rgba(16,185,129,0.2); }
+        .btn-nav-arrow { border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+        .btn-nav-arrow:hover { background: #f8fafc; }
+
+        /* 달력 그리드 & 요일 헤더 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: 5px; overflow-x: auto; padding-bottom: 6px; }
+        .calendar-day-header { font-weight: 800; text-align: center; padding: 7px 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.88rem; color: #475569; }
+        .calendar-day-header.sun { color: #e11d48; background: #fff1f2; border-color: #fecdd3; }
+        .calendar-day-header.sat { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
+
+        /* 평일 칸 배경: 깔끔한 흰색 */
+        .calendar-cell { min-width: 0; min-height: 158px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; font-size: 1.05rem; cursor: pointer; display: flex; flex-direction: column; transition: 0.1s; position: relative; }
+        .calendar-cell:hover { background: #f8fafc; }
+
+        /* 일요일, 공휴일, 지정휴일 칸 전체: 연분홍 배경 + 테두리 */
+        .calendar-cell.sun, .calendar-cell.holiday { border: 1.5px solid #f5c2c7 !important; background: #fff5f7 !important; }
+        /* 토요일 칸 전체: 연파랑 배경 + 테두리 */
+        .calendar-cell.sat { border: 1.5px solid #b6d4fe !important; background: #f0f7ff !important; }
+        /* 선택된 날짜 강조 */
+        .calendar-cell.selected { border: 2px solid #10b981 !important; background: #ecfdf5 !important; box-shadow: 0 3px 10px rgba(16,185,129,0.15); }
+
+        .date-num { font-weight: 800; font-size: 0.95rem; padding: 1px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
         .calendar-cell.sun .date-num { color: #d9534f; font-weight: 800; }
         .calendar-cell.sat .date-num { color: #0275d8; font-weight: 800; }
         .calendar-cell.holiday .date-num { color: #d9534f !important; font-weight: 800; }
-        .holiday-name { font-size: 0.75rem; color: #d9534f; font-weight: 700; letter-spacing: -0.5px; text-align: right; word-break: keep-all; margin-left: 4px; }
+        .date-num.today-badge { background: #2563eb !important; color: #fff !important; border-radius: 999px; padding: 1px 7px; font-size: 0.85rem; box-shadow: 0 1px 3px rgba(37,99,235,0.3); }
+        .holiday-name { font-size: 0.76rem; color: #e11d48; font-weight: 800; letter-spacing: -0.5px; text-align: right; word-break: keep-all; margin-left: 4px; }
+
         .tag-container { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; flex: 1; width: 100%; }
-        .event-box { display: flex; align-items: center; gap: 4px; padding: 3px 5px; border-radius: 4px; font-size: 0.76rem; letter-spacing: -0.6px; font-weight: 700; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .event-box.routine { background-color: #fff8e1; border: 1px solid #ffecb3; color: #333; }
-        .event-box.breakdown { background-color: #fce4ec; border: 1px solid #f8bbd0; color: #b71c1c; }
-        .event-box.preventive { background-color: #e8f0fe; border: 1px solid #c6dafc; color: #0d47a1; }
-        .event-box.issue { background-color: #f3e5f5; border: 1px solid #e1bee7; color: #4a148c; }
-        .event-box.inspection { background-color: #e6fcf5; border: 1px solid #96f2d7; color: #087f5b; }
-        .mini-badge { padding: 1px 4px; border-radius: 3px; font-size: 0.62rem; font-weight: 800; color: #fff; flex-shrink: 0; }
-        .mini-badge.routine { background: #fd7e14; }
-        .mini-badge.breakdown { background: #dc3545; }
-        .mini-badge.preventive { background: #007bff; }
-        .mini-badge.issue { background: #8e44ad; }
-        .mini-badge.inspection { background: #20c997; }
-        .detail-header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #28a745; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+
+        /* 달력 내부 배지: 왼쪽 포인트 컬러 바 스타일 */
+        .event-box { display: flex; align-items: center; gap: 4px; padding: 2.5px 5px; border-radius: 4px; font-size: 0.77rem; letter-spacing: -0.6px; font-weight: 700; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid rgba(0,0,0,0.05); }
+        .event-box.routine { background-color: #fffbeb; border-left: 3.5px solid #f59e0b; color: #1e293b; }
+        .event-box.breakdown { background-color: #fef2f2; border-left: 3.5px solid #dc2626; color: #991b1b; }
+        .event-box.preventive { background-color: #eff6ff; border-left: 3.5px solid #2563eb; color: #1e3a8a; }
+        .event-box.issue { background-color: #faf5ff; border-left: 3.5px solid #9333ea; color: #581c87; }
+        .event-box.inspection { background-color: #f0fdf4; border-left: 3.5px solid #16a34a; color: #065f46; }
+
+        .mini-badge { padding: 1.5px 4px; border-radius: 3px; font-size: 0.62rem; font-weight: 800; color: #fff; flex-shrink: 0; }
+        .mini-badge.routine { background: #f59e0b; color: #000; }
+        .mini-badge.breakdown { background: #dc2626; }
+        .mini-badge.preventive { background: #2563eb; }
+        .mini-badge.issue { background: #9333ea; }
+        .mini-badge.inspection { background: #16a34a; }
+
+        /* 하단 기록 상세 카드 */
+        .detail-header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 10px; margin-bottom: 12px; gap: 8px; flex-wrap: nowrap; }
+        #detail-title { margin: 0; font-size: 1.08rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .result-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
-        .result-list li { background: #f8f9fa; border: 1px solid #dee2e6; padding: 14px; border-radius: 8px; font-size: 0.92rem; line-height: 1.55; display: flex; flex-direction: column; justify-content: space-between; }
-        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 12px; }
+        .result-list li { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #cbd5e1; padding: 14px; border-radius: 10px; font-size: 0.92rem; line-height: 1.55; display: flex; flex-direction: column; justify-content: space-between; }
+
+        /* 모달 */
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 12px; }
         .modal-content { background: #fff; width: 100%; max-width: 500px; padding: 22px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.22); max-height: 92vh; overflow-y: auto; }
-        .modal-title { font-size: 1.15rem; font-weight: 900; margin-bottom: 14px; color: #155724; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 1.15rem; font-weight: 900; margin-bottom: 14px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
         .veh-chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
-        .veh-chip { padding: 8px 4px; border: 1px solid #ced4da; background: #f8f9fa; border-radius: 6px; font-size: 0.82rem; font-weight: 800; color: #495057; cursor: pointer; text-align: center; transition: 0.15s; }
-        .veh-chip:hover { background: #e9ecef; }
-        .veh-chip.active { background: #155724; color: #fff; border-color: #155724; box-shadow: 0 2px 5px rgba(21,87,36,0.25); }
-        #recent-record-hint { background: #e8f5e9; border: 1px solid #c3e6cb; color: #155724; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-        .btn-fill-last { background: #28a745; color: #fff; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
-        .type-toggle-container { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; background: #f1f3f5; padding: 6px; border-radius: 10px; }
+        .veh-chip { padding: 8px 4px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; font-size: 0.82rem; font-weight: 800; color: #475569; cursor: pointer; text-align: center; transition: 0.15s; }
+        .veh-chip:hover { background: #e2e8f0; }
+        .veh-chip.active { background: #0f172a; color: #fff; border-color: #0f172a; box-shadow: 0 2px 5px rgba(15,23,42,0.25); }
+
+        #recent-record-hint { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .btn-fill-last { background: #10b981; color: #fff; border: none; padding: 4px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
+
+        .type-toggle-container { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; background: #f1f5f9; padding: 6px; border-radius: 10px; }
         .type-toggle-row { display: flex; gap: 5px; }
         .type-toggle-row input[type="radio"] { display: none; }
-        .type-toggle-row label { flex: 1; text-align: center; padding: 9px 4px; background: #fff; border: 1px solid #dee2e6; border-radius: 7px; cursor: pointer; font-weight: 800; color: #555; font-size: 0.84rem; letter-spacing: -0.5px; transition: 0.15s; }
-        .type-toggle-row input[type="radio"]:checked + label.routine { background: #fd7e14; color: #fff; border-color: #fd7e14; box-shadow: 0 2px 6px rgba(253,126,20,0.3); }
-        .type-toggle-row input[type="radio"]:checked + label.breakdown { background: #dc3545; color: #fff; border-color: #dc3545; box-shadow: 0 2px 6px rgba(220,53,69,0.3); }
-        .type-toggle-row input[type="radio"]:checked + label.preventive { background: #007bff; color: #fff; border-color: #007bff; box-shadow: 0 2px 6px rgba(0,123,255,0.3); }
-        .type-toggle-row input[type="radio"]:checked + label.inspection { background: #20c997; color: #fff; border-color: #20c997; box-shadow: 0 2px 6px rgba(32,201,151,0.3); }
-        .type-toggle-row input[type="radio"]:checked + label.issue { background: #8e44ad; color: #fff; border-color: #8e44ad; box-shadow: 0 2px 6px rgba(142,68,173,0.3); }
+        .type-toggle-row label { flex: 1; text-align: center; padding: 9px 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 7px; cursor: pointer; font-weight: 800; color: #475569; font-size: 0.84rem; letter-spacing: -0.5px; transition: 0.15s; }
+        .type-toggle-row input[type="radio"]:checked + label.routine { background: #f59e0b; color: #fff; border-color: #f59e0b; box-shadow: 0 2px 6px rgba(245,158,11,0.3); }
+        .type-toggle-row input[type="radio"]:checked + label.breakdown { background: #dc2626; color: #fff; border-color: #dc2626; box-shadow: 0 2px 6px rgba(220,38,38,0.3); }
+        .type-toggle-row input[type="radio"]:checked + label.preventive { background: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 2px 6px rgba(37,99,235,0.3); }
+        .type-toggle-row input[type="radio"]:checked + label.inspection { background: #16a34a; color: #fff; border-color: #16a34a; box-shadow: 0 2px 6px rgba(22,163,74,0.3); }
+        .type-toggle-row input[type="radio"]:checked + label.issue { background: #9333ea; color: #fff; border-color: #9333ea; box-shadow: 0 2px 6px rgba(147,51,234,0.3); }
+
         .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #444; }
-        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 7px; font-size: 0.95rem; font-family: inherit; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,0.15); }
+        .form-group label { display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.84rem; color: #475569; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 7px; font-size: 0.94rem; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.15); }
+
         .input-unit-wrap { position: relative; display: flex; align-items: center; }
         .input-unit-wrap input { padding-right: 38px; font-weight: 700; }
-        .input-unit-wrap .unit-txt { position: absolute; right: 12px; font-size: 0.82rem; font-weight: 800; color: #888; pointer-events: none; }
-        .issue-warning-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 14px; font-size: 0.85rem; display: none; flex-direction: column; gap: 8px; }
-        .issue-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 8px 10px; border-radius: 6px; border: 1px solid #f5c6cb; gap: 8px; }
-        .checklist-group { background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #e1e4e8; margin-top: 8px; }
-        .cl-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding-bottom: 8px; margin-bottom: 10px; }
-        .cl-title { color: #0056b3; font-weight: 800; font-size: 0.88rem; }
-        .btn-check-all { background: #fd7e14; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+        .input-unit-wrap .unit-txt { position: absolute; right: 12px; font-size: 0.82rem; font-weight: 800; color: #64748b; pointer-events: none; }
+
+        .issue-warning-box { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; margin-bottom: 14px; font-size: 0.85rem; display: none; flex-direction: column; gap: 8px; }
+        .issue-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 8px 10px; border-radius: 6px; border: 1px solid #fecdd3; gap: 8px; }
+
+        .checklist-group { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 8px; }
+        .cl-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; margin-bottom: 10px; }
+        .cl-title { color: #1d4ed8; font-weight: 800; font-size: 0.88rem; }
+        .btn-check-all { background: #f59e0b; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
         .checklist-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
-        .checklist-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #fff; border: 1px solid #e9ecef; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: 0.1s; }
-        .checklist-item:hover { border-color: #fd7e14; }
-        .checklist-item input { width: 18px; height: 18px; cursor: pointer; accent-color: #fd7e14; flex-shrink: 0; }
+        .checklist-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: 0.1s; }
+        .checklist-item:hover { border-color: #f59e0b; }
+        .checklist-item input { width: 18px; height: 18px; cursor: pointer; accent-color: #f59e0b; flex-shrink: 0; }
+
         .modal-btns { display: flex; gap: 10px; margin-top: 18px; }
-        .btn-save { flex: 1.3; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; }
-        .btn-cancel { flex: 0.7; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1.15rem; font-weight: 800; color: #28a745; transition: opacity 0.3s; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #28a745; border-radius: 50%; width: 38px; height: 38px; animation: spin 1s linear infinite; margin-bottom: 12px; }
+        .btn-save { flex: 1.3; padding: 12px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; }
+        .btn-cancel { flex: 0.7; padding: 12px; background: #64748b; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; }
+
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1.15rem; font-weight: 800; color: #10b981; transition: opacity 0.3s; }
+        .spinner { border: 4px solid #f1f5f9; border-top: 4px solid #10b981; border-radius: 50%; width: 38px; height: 38px; animation: spin 1s linear infinite; margin-bottom: 12px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 모바일 최적화 (버튼 두 줄 밀림 방지) */
         @media (max-width: 768px) {
-            .container { padding: 0 10px; margin: 10px auto; }
-            .card { padding: 14px; }
+            .top-navbar { padding: 8px 10px; margin-top: 4px; }
+            .top-title { font-size: 0.95rem; }
+            .top-user { font-size: 0.74rem; padding: 3px 8px; }
+            .nav-pill-btn { padding: 5px 10px; font-size: 0.76rem; }
+
+            .container { padding: 0 8px; margin: 6px auto 20px; gap: 12px; }
+            .card { padding: 12px; border-radius: 12px; }
+
+            #current-month-display { font-size: 1.08rem; }
+            .btn-today-mini { padding: 2px 6px; font-size: 0.7rem; }
+            .header-action-group button { padding: 4px 7px; font-size: 0.74rem; }
+
+            #detail-title { font-size: 0.96rem; }
             .veh-chip-grid { grid-template-columns: repeat(3, 1fr); }
             .result-list { grid-template-columns: 1fr; }
         }
@@ -108,11 +168,16 @@
         <span id="loading-text">차량 정비 데이터 불러오는 중...</span>
     </div>
 
-    <div class="top-bar">
-        <div class="top-title">
-            <span>🔧 차량 정비 및 일일점검 대장</span>
+    <!-- 상단 통합 네비게이션 바 (모바일 1줄 고정) -->
+    <div class="top-navbar">
+        <div class="top-title-group">
+            <span class="top-title">🔧 정비·점검 대장</span>
+            <span class="top-user" id="user-badge">확인 중</span>
         </div>
-        <span class="top-user" id="user-badge">작성자 확인 중</span>
+        <div class="top-nav-btns">
+            <button class="nav-pill-btn stats" onclick="location.href='stats.html'">📊 집계</button>
+            <button class="nav-pill-btn dispatch" onclick="location.href='index.html'">📅 배차판</button>
+        </div>
     </div>
 
     <div class="container">
@@ -122,6 +187,7 @@
         </div>
 
         <div class="card">
+            <!-- 달력 헤더 (모바일 1줄 고정) -->
             <div class="calendar-header">
                 <div class="month-title-box">
                     <span id="current-month-display" onclick="goToToday()" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
@@ -129,10 +195,8 @@
                 </div>
 
                 <div class="header-action-group">
-                    <button onclick="openModalForSelectedDate()" style="background: #ffc107; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">+ 기록추가</button>
-                    <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">PC버전</button>
-                    <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">집계</button>
-                    <button onclick="location.href='index.html'" style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">배차판</button>
+                    <button class="btn-add-top" onclick="openModalForSelectedDate()">+ 기록추가</button>
+                    <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #0ea5e9; color: white; border: none;">PC버전</button>
                     <button class="btn-nav-arrow" onclick="changeMonth(-1)">＜</button>
                     <button class="btn-nav-arrow" onclick="changeMonth(1)">＞</button>
                 </div>
@@ -143,11 +207,11 @@
 
         <div class="card">
             <div class="detail-header-bar">
-                <h3 id="detail-title" style="margin:0; font-size: 1.1rem; color: #155724;">기록 상세</h3>
-                <button onclick="openModalForSelectedDate()" style="background: #28a745; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">+ 이 날짜에 기록 추가</button>
+                <h3 id="detail-title">기록 상세</h3>
+                <button onclick="openModalForSelectedDate()" style="background: #10b981; color: #fff; border: none; padding: 5px 11px; border-radius: 6px; font-weight: 800; font-size: 0.78rem; cursor: pointer; white-space: nowrap; flex-shrink: 0;">+ 이 날짜에 기록 추가</button>
             </div>
             <ul id="detail-content" class="result-list">
-                <li style="color:#666; text-align:center; padding: 20px;">달력 날짜를 클릭하시면 상세 내역이 표시됩니다.</li>
+                <li style="color:#64748b; text-align:center; padding: 20px;">달력 날짜를 클릭하시면 상세 내역이 표시됩니다.</li>
             </ul>
         </div>
     </div>
@@ -156,7 +220,7 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-title">
                 <span id="modal-date-title">기록 추가</span>
-                <span style="font-size:0.8rem; color:#666; font-weight:600;" id="modal-writer-label"></span>
+                <span style="font-size:0.8rem; color:#64748b; font-weight:700;" id="modal-writer-label"></span>
             </div>
             <input type="hidden" id="m-date">
             <input type="hidden" id="m-doc-id">
@@ -281,9 +345,9 @@
                         <option value="불합격">불합격</option>
                     </select>
                 </div>
-                <div class="form-group" id="ip-reason-group" style="display: none; background: #fff5f5; padding: 10px; border: 1px dashed #dc3545; border-radius: 6px;">
-                    <label style="color: #dc3545;">🚨 불합격 사유 (필수)</label>
-                    <input type="text" id="ip-reason" placeholder="예: 제동미달, 매연초과" style="border-color: #dc3545;">
+                <div class="form-group" id="ip-reason-group" style="display: none; background: #fff1f2; padding: 10px; border: 1px dashed #e11d48; border-radius: 6px;">
+                    <label style="color: #e11d48;">🚨 불합격 사유 (필수)</label>
+                    <input type="text" id="ip-reason" placeholder="예: 제동미달, 매연초과" style="border-color: #e11d48;">
                 </div>
                 <div class="form-group">
                     <label>다음 검사 예정일 (만료일)</label>
@@ -377,6 +441,9 @@
 
         const vehicleList = ['1호차', '2호차', '3호차', '예비버스', '11호차', '12호차', '13호차', '14호차', '3818'];
         const presetShops = ['용현점', '영남공업사', '파주공업사', '롯데칠성신협양평분점', '노원자동차검사소'];
+
+        const _nowGlobal = new Date();
+        const todayStrGlobal = `${_nowGlobal.getFullYear()}-${String(_nowGlobal.getMonth() + 1).padStart(2, '0')}-${String(_nowGlobal.getDate()).padStart(2, '0')}`;
 
         let currentDate = new Date();
         let selectedDateStr = "";
@@ -496,10 +563,10 @@
             const btn = document.getElementById('btn-toggle-view');
             if (isMobileView) {
                 viewport.setAttribute('content', 'width=1050, user-scalable=yes');
-                btn.innerText = '📱폰화면'; btn.style.background = '#ffc107'; btn.style.color = '#000'; isMobileView = false;
+                btn.innerText = '📱폰화면'; btn.style.background = '#facc15'; btn.style.color = '#0f172a'; isMobileView = false;
             } else {
                 viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes');
-                btn.innerText = 'PC버전'; btn.style.background = '#17a2b8'; btn.style.color = '#fff'; isMobileView = true;
+                btn.innerText = 'PC버전'; btn.style.background = '#0ea5e9'; btn.style.color = '#fff'; isMobileView = true;
             }
         }
 
@@ -605,14 +672,14 @@
                 return `
                     <div class="alert-banner-item">
                         <div style="min-width:0; cursor:pointer;" onclick="selectDate('${issue.date}')">
-                            <div style="font-weight:800; font-size:0.88rem; color:#333; display:flex; align-items:center; gap:5px;">
+                            <div style="font-weight:800; font-size:0.88rem; color:#0f172a; display:flex; align-items:center; gap:5px;">
                                 ${badge} <span>[${issue.vehicle}] ${title}</span>
                             </div>
-                            <div style="font-size:0.76rem; color:#666; margin-top:3px;">
+                            <div style="font-size:0.76rem; color:#64748b; margin-top:3px;">
                                 ${issue.detail || '재검/정비 요망'} (${issue.date} · ${issue.driver || ''})
                             </div>
                         </div>
-                        <button type="button" onclick="resolveIssue('${issue.id}')" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:800; font-size:0.78rem; cursor:pointer; flex-shrink:0;">해결완료</button>
+                        <button type="button" onclick="resolveIssue('${issue.id}')" style="background:#10b981; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:800; font-size:0.78rem; cursor:pointer; flex-shrink:0;">해결완료</button>
                     </div>
                 `;
             }).join('');
@@ -639,7 +706,8 @@
 
         window.onload = () => {
             initVehicleChips();
-            document.getElementById('user-badge').innerText = `👤 작성자: ${currentUser}`;
+            const dispName = (currentUser && !currentUser.includes('admin') && currentUser.length >= 2) ? currentUser.substring(1) : currentUser;
+            document.getElementById('user-badge').innerText = `👤 ${dispName}님`;
 
             setTimeout(() => {
                 const loader = document.getElementById('loading-overlay');
@@ -673,7 +741,7 @@
                 <div class="calendar-day-header">수</div><div class="calendar-day-header">목</div><div class="calendar-day-header">금</div><div class="calendar-day-header sat">토</div>
             `;
 
-            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-cell" style="background:#f4f6f9; cursor:default;"></div>`;
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-cell" style="background:#f8fafc; cursor:default; border-color:#f1f5f9;"></div>`;
 
             for (let i = 1; i <= lastDate; i++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
@@ -687,11 +755,12 @@
                 if(dateStr === selectedDateStr) extraClass += 'selected ';
 
                 let extraHTML = holidayName ? `<span class="holiday-name">${holidayName}</span>` : '';
+                const isTodayNum = (dateStr === todayStrGlobal) ? 'today-badge' : '';
 
                 grid.innerHTML += `
                     <div class="${extraClass}" onclick="handleCellClick('${dateStr}')" id="cell_${dateStr}">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <span class="date-num">${i}</span>${extraHTML}
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="date-num ${isTodayNum}">${i}</span>${extraHTML}
                         </div>
                         <div class="tag-container" id="tags_${dateStr}"></div>
                     </div>
@@ -747,43 +816,43 @@
             const dayRecords = allRecords.filter(r => r.date === dateStr);
 
             if(dayRecords.length === 0) {
-                contentUl.innerHTML = `<li style="color:#666; text-align:center; padding: 25px; grid-column: 1 / -1;">이 날짜에 등록된 차량 기록이 없습니다.<br><span style="font-size:0.85rem; color:#888;">우측 상단의 <b>[+ 기록추가]</b> 버튼을 눌러 일지나 정비 내역을 등록하세요.</span></li>`;
+                contentUl.innerHTML = `<li style="color:#64748b; text-align:center; padding: 25px; grid-column: 1 / -1; border-left: 1px solid #e2e8f0;">이 날짜에 등록된 차량 기록이 없습니다.<br><span style="font-size:0.84rem; color:#94a3b8;">상단의 <b>[+ 기록추가]</b> 버튼을 눌러 일지나 정비 내역을 등록하세요.</span></li>`;
                 return;
             }
 
             let html = '';
             dayRecords.forEach(r => {
-                let titleColor = r.type === '고장수리' ? '#dc3545' : (r.type === '예방정비' ? '#007bff' : (r.type === '특이사항' ? '#8e44ad' : (r.type === '정기검사' ? '#0ca678' : '#e65100')));
-                if(r.type === '정기검사' && r.ipResult && r.ipResult.includes('불합격')) titleColor = '#dc3545';
+                let titleColor = r.type === '고장수리' ? '#dc2626' : (r.type === '예방정비' ? '#2563eb' : (r.type === '특이사항' ? '#9333ea' : (r.type === '정기검사' ? '#16a34a' : '#d97706')));
+                if(r.type === '정기검사' && r.ipResult && r.ipResult.includes('불합격')) titleColor = '#dc2626';
 
-                html += `<li>
+                html += `<li style="border-left-color: ${titleColor};">
                     <div>
-                        <div style="font-weight: 800; color: ${titleColor}; margin-bottom: 8px; font-size: 1rem; border-bottom: 1px dashed #ccc; padding-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight: 800; color: ${titleColor}; margin-bottom: 8px; font-size: 1rem; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
                             <span>[${r.vehicle}] ${r.type}</span>
-                            <span style="color:#666; font-size:0.82rem; font-weight:600;">작성: ${r.driver || '-'}</span>
+                            <span style="color:#64748b; font-size:0.8rem; font-weight:700;">작성: ${r.driver || '-'}</span>
                         </div>`;
 
                 if (r.type === '일정비') {
                     html += `
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 6px; background:#fff; padding:6px 8px; border-radius:6px; border:1px solid #eee;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 6px; background:#fff; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0;">
                             <span><b>주행가능:</b> ${r.range ? r.range+'km' : '-'}</span>
-                            <span><b>누적:</b> <b style="color:#0056b3;">${r.total ? r.total+'km' : '-'}</b></span>
-                            <span><b>요소수:</b> <b style="color:#155724;">${r.def ? r.def+'%' : '-'}</b></span>
+                            <span><b>누적:</b> <b style="color:#2563eb;">${r.total ? r.total+'km' : '-'}</b></span>
+                            <span><b>요소수:</b> <b style="color:#047857;">${r.def ? r.def+'%' : '-'}</b></span>
                         </div>
-                        <div style="color: #495057; font-size: 0.85rem;">
-                            <b>일일 점검:</b> 6항목 중 <b style="color:#fd7e14;">${r.chkCount}개</b> 양호 
-                            <div style="color:#888; font-size:0.78rem; margin-top:2px;">(${r.chkItems || ''})</div>
+                        <div style="color: #475569; font-size: 0.85rem;">
+                            <b>일일 점검:</b> 6항목 중 <b style="color:#d97706;">${r.chkCount}개</b> 양호 
+                            <div style="color:#64748b; font-size:0.78rem; margin-top:2px;">(${r.chkItems || ''})</div>
                         </div>`;
                 } else if (r.type === '고장수리') {
-                    let shopText = r.shop ? ` | <b style="color:#007bff;">업체:</b> ${r.shop}` : '';
+                    let shopText = r.shop ? ` | <b style="color:#2563eb;">업체:</b> ${r.shop}` : '';
                     let totalKmText = r.total ? `<br><b>누적KM:</b> ${r.total}km` : '';
                     html += `<div><b>원인:</b> ${r.cause} | <b>부품:</b> ${r.part} ${totalKmText}<br><b>조치:</b> ${r.action}${shopText}</div>`;
                 } else if (r.type === '예방정비') {
-                    let shopText = r.shop ? ` | <b style="color:#007bff;">업체:</b> ${r.shop}` : '';
+                    let shopText = r.shop ? ` | <b style="color:#2563eb;">업체:</b> ${r.shop}` : '';
                     let totalKmText = r.total ? `<br><b>누적KM:</b> ${r.total}km` : '';
                     html += `<div><b>항목:</b> ${r.item} ${totalKmText}<br><b>조치:</b> ${r.action}${shopText}</div>`;
                 } else if (r.type === '정기검사') { 
-                    let shopText = r.shop ? ` | <b style="color:#0ca678;">업체:</b> ${r.shop}` : '';
+                    let shopText = r.shop ? ` | <b style="color:#16a34a;">업체:</b> ${r.shop}` : '';
                     let totalKmText = r.total ? `<br><b>누적KM:</b> ${r.total}km` : ''; 
                     let resultText = r.ipResult;
                     if (r.ipResult && r.ipResult.includes('불합격') && r.ipReason) resultText += `(${r.ipReason})`;
@@ -791,22 +860,22 @@
                     let statusBadge = '';
                     if (r.ipResult && r.ipResult.includes('불합격')) {
                         statusBadge = r.isResolved 
-                            ? `<span style="background:#28a745; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">재검합격(해결)</span>` 
-                            : `<span style="background:#dc3545; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">재검요망</span>`;
+                            ? `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">재검합격(해결)</span>` 
+                            : `<span style="background:#dc2626; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">재검요망</span>`;
                     }
-                    let resColor = r.ipResult && r.ipResult.includes('불합격') ? '#dc3545' : '#28a745';
+                    let resColor = r.ipResult && r.ipResult.includes('불합격') ? '#dc2626' : '#16a34a';
                     html += `<div><b>검사구분:</b> ${r.ipType} <span style="color:${resColor}; font-weight:bold;">[${resultText}]</span>${statusBadge}${totalKmText}<br><b>다음 검사일:</b> ${r.ipNextDate || '미정'}${shopText}</div>`;
                 } else if (r.type === '특이사항') {
                     let statusBadge = r.isResolved 
-                        ? `<span style="background:#28a745; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">해결완료</span>` 
-                        : `<span style="background:#dc3545; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">미해결</span>`;
-                    html += `<div><b style="color:#8e44ad;">증상:</b> ${r.title}${statusBadge}<br><b style="color:#555;">상세:</b> ${r.detail || '-'}</div>`;
+                        ? `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">해결완료</span>` 
+                        : `<span style="background:#dc2626; color:white; padding:2px 6px; border-radius:4px; font-size:0.72rem; margin-left:5px;">미해결</span>`;
+                    html += `<div><b style="color:#9333ea;">증상:</b> ${r.title}${statusBadge}<br><b style="color:#475569;">상세:</b> ${r.detail || '-'}</div>`;
                 }
                 
                 html += `</div>
-                    <div style="margin-top: 10px; text-align: right; border-top: 1px dashed #e1e4e8; padding-top: 8px;">
-                        <button onclick="editRecord('${r.id}')" style="background:#ffc107; color:#000; border:none; padding:4px 12px; border-radius:5px; font-size:0.8rem; cursor:pointer; font-weight:800; margin-right:4px;">수정</button>
-                        <button onclick="deleteRecord('${r.id}')" style="background:#dc3545; color:#fff; border:none; padding:4px 12px; border-radius:5px; font-size:0.8rem; cursor:pointer; font-weight:800;">삭제</button>
+                    <div style="margin-top: 10px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                        <button onclick="editRecord('${r.id}')" style="background:#facc15; color:#0f172a; border:none; padding:5px 12px; border-radius:6px; font-size:0.8rem; cursor:pointer; font-weight:800; margin-right:4px;">수정</button>
+                        <button onclick="deleteRecord('${r.id}')" style="background:#ef4444; color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:0.8rem; cursor:pointer; font-weight:800;">삭제</button>
                     </div>
                 </li>`;
             });
@@ -891,12 +960,12 @@
 
             if (unresolved.length > 0) {
                 warningBox.style.display = 'flex';
-                let html = '<span style="font-weight: 800; color: #d32f2f;">🚨 선택 차량 미해결 경고 (확인 및 해결 요망)</span>';
+                let html = '<span style="font-weight: 800; color: #dc2626;">🚨 선택 차량 미해결 경고 (확인 및 해결 요망)</span>';
                 
                 unresolved.forEach(issue => {
                     let badge = issue.type === '정기검사' 
-                        ? `<span style="background:#dc3545; color:white; padding:2px 4px; border-radius:4px; font-size:0.7rem; margin-right:4px;">검사불합격</span>` 
-                        : `<span style="background:#8e44ad; color:white; padding:2px 4px; border-radius:4px; font-size:0.7rem; margin-right:4px;">특이사항</span>`;
+                        ? `<span style="background:#dc2626; color:white; padding:2px 5px; border-radius:4px; font-size:0.7rem; margin-right:4px;">검사불합격</span>` 
+                        : `<span style="background:#9333ea; color:white; padding:2px 5px; border-radius:4px; font-size:0.7rem; margin-right:4px;">특이사항</span>`;
                     
                     let titleText = issue.type === '정기검사' ? `${issue.ipType} 불합격(${issue.ipReason})` : issue.title;
                     let detailText = issue.type === '정기검사' ? `빠른 시일 내 정비 후 재검사 요망` : issue.detail;
@@ -904,10 +973,10 @@
                     html += `
                     <div class="issue-item">
                         <div style="display:flex; flex-direction:column; gap:3px;">
-                            <span style="font-weight:bold; color:#721c24;">${badge} ${titleText}</span>
-                            <span style="font-size:0.78rem; color:#666;">${detailText} (${issue.date}, ${issue.driver})</span>
+                            <span style="font-weight:bold; color:#7f1d1d;">${badge} ${titleText}</span>
+                            <span style="font-size:0.78rem; color:#64748b;">${detailText} (${issue.date}, ${issue.driver})</span>
                         </div>
-                        <button type="button" onclick="resolveIssue('${issue.id}')" style="background: #28a745; color: white; border: none; padding: 6px 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 0.8rem; flex-shrink:0;">해결</button>
+                        <button type="button" onclick="resolveIssue('${issue.id}')" style="background: #10b981; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; flex-shrink:0;">해결</button>
                     </div>`;
                 });
                 warningBox.innerHTML = html;
@@ -973,7 +1042,6 @@
             document.getElementById('modal-overlay').style.display = 'flex'; 
         }
 
-        // ✅ 원래의 기본 모달 닫기 및 뒤로가기 코드로 원복
         function closeModal() {
             document.getElementById('modal-overlay').style.display = 'none';
             if (history.state && history.state.isModal) history.back();
