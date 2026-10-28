@@ -11,134 +11,342 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f4f6f9; color: #333; letter-spacing: -0.3px; }
-        #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #eef2f7; }
-        .login-card { background: #fff; padding: 40px 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 340px; text-align: center; }
-        .login-card h2 { margin-bottom: 25px; color: #007bff; font-size: 1.5rem; letter-spacing: -1px; }
-        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ced4da; font-size: 1rem; font-family: inherit; }
-        .btn-login { width: 100%; padding: 14px; background: #007bff; color: #fff; border: none; border-radius: 6px; font-weight: 700; font-size: 1.05rem; cursor: pointer; transition: 0.2s; }
-        .btn-login:hover { background: #0056b3; }
-        .btn-login:disabled { background: #888; cursor: not-allowed; }
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #f1f5f9; color: #1e293b; letter-spacing: -0.3px; }
+        
+        /* 로그인 화면 */
+        #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 15px; }
+        .login-card { background: #fff; padding: 36px 28px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 340px; text-align: center; }
+        .login-card h2 { margin-bottom: 22px; color: #0f172a; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.8px; }
+        .login-input { width: 100%; padding: 12px 14px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.98rem; font-family: inherit; transition: 0.2s; }
+        .login-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+        .btn-login { width: 100%; padding: 13px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-weight: 800; font-size: 1.02rem; cursor: pointer; transition: 0.2s; }
+        .btn-login:hover { background: #1d4ed8; }
+        .btn-login:disabled { background: #94a3b8; cursor: not-allowed; }
+
         #app-container { display: none; }
-        .dispatch-container { display: flex; max-width: 1600px; margin: 20px auto; gap: 20px; padding: 0 20px; }
-        .main-section { flex: 3.5; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-        .sidebar-section { width: 300px; min-width: 260px; max-width: 800px; flex-shrink: 0; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: fit-content; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 1.25rem; font-weight: 700; }
-        .calendar-header button { padding: 4px 12px; font-size: 1.1rem; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; font-family: inherit; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(155px, 1fr)) !important; gap: 4px; overflow-x: auto; padding-bottom: 5px; }
-        .calendar-day-header { font-weight: 700; text-align: center; padding: 8px; background: #eef2f7; border-radius: 4px; font-size: 0.95rem; }
-        .calendar-day-header.sun { color: #d9534f; }
-        .calendar-day-header.sat { color: #0275d8; }
-        /* 평일 기본 배경: 눈이 편안한 부드러운 미색 */
-        /* 평일 배경: 원래대로 깔끔한 흰색, 테두리 없음 */
-        /* 달력 칸 전체는 깔끔한 흰색 배경, 테두리 없음 */
-        /* 달력 칸 전체는 깔끔한 흰색 */
-        /* 평일 칸 배경은 흰색, 기본 미세 테두리 */
-        /* 평일 칸 배경은 깔끔한 흰색, 기본 미세 테두리 */
+
+        /* 상단 통합 네비게이션 바 (모바일 1줄 고정) */
+        .top-navbar {
+            max-width: 1600px;
+            margin: 10px auto 0;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+        .user-profile-pill {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 999px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #welcome-msg { font-weight: 800; color: #1e293b; font-size: 0.95rem; white-space: nowrap; }
+        .top-nav-btns { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; }
+        .nav-pill-btn {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.82rem;
+            line-height: 1.2;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.15s;
+            font-family: inherit;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .nav-pill-btn.stats { background: #6366f1; color: #fff; }
+        .nav-pill-btn.maint { background: #10b981; color: #fff; }
+        .nav-pill-btn.logout { background: #ef4444; color: #fff; }
+        .nav-pill-btn:hover { filter: brightness(0.93); }
+
+        /* 메인 레이아웃 */
+        .dispatch-container { display: flex; max-width: 1600px; margin: 12px auto 25px; gap: 18px; padding: 0 16px; }
+        .main-section { flex: 3.5; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+        .sidebar-section { width: 320px; min-width: 270px; max-width: 800px; flex-shrink: 0; background: #fff; padding: 18px; border-radius: 14px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); border: 1px solid #e2e8f0; height: fit-content; }
+        .card { background: #fff; padding: 18px; border-radius: 14px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); border: 1px solid #e2e8f0; }
+
+        /* 달력 헤더 (모바일 1줄 고정) */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+        .month-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        #month-display {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #0f172a;
+            cursor: pointer;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+        }
+        .btn-today-chip {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .cal-ctrl-btns {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+        .cal-ctrl-btns button {
+            padding: 5px 10px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #334155;
+            border-radius: 6px;
+            font-family: inherit;
+            white-space: nowrap;
+            line-height: 1.1;
+        }
+        .cal-ctrl-btns button:hover { background: #f8fafc; }
+
+        /* 달력 그리드 & 요일 헤더 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(155px, 1fr)) !important; gap: 5px; overflow-x: auto; padding-bottom: 6px; }
+        .calendar-day-header { font-weight: 800; text-align: center; padding: 7px 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.88rem; color: #475569; }
+        .calendar-day-header.sun { color: #e11d48; background: #fff1f2; border-color: #fecdd3; }
+        .calendar-day-header.sat { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
+
+        /* 평일 칸 배경: 깔끔한 흰색 */
         .calendar-cell { 
             min-width: 0 !important;
-            min-height: 160px; 
+            min-height: 162px; 
             background: #ffffff; 
-            border: 1px solid #e1e4e8; 
-            border-radius: 4px; 
-            padding: 3px !important; 
-            font-size: 1.1rem; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            padding: 4px !important; 
+            font-size: 1.05rem; 
             cursor: pointer; 
             display: flex; 
             flex-direction: column; 
             position: relative; 
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        .calendar-cell:hover { background: #fafbfc; }
+        .calendar-cell:hover { background: #f8fafc; }
 
-        /* 🚀 일요일, 공휴일, 지정휴일 칸 전체: 연한 붉은 분홍빛 배경 + 테두리 */
+        /* 일요일, 공휴일, 지정휴일 칸 전체: 연한 붉은 분홍빛 배경 + 테두리 */
         .calendar-cell.sun, 
         .calendar-cell.holiday { 
             border: 1.5px solid #f5c2c7 !important; 
             background: #fff5f7 !important; 
         }
 
-        /* 🚀 토요일 칸 전체: 연한 푸른 분홍빛 배경 + 테두리 */
+        /* 토요일 칸 전체: 연한 푸른 분홍빛 배경 + 테두리 */
         .calendar-cell.sat { 
             border: 1.5px solid #b6d4fe !important; 
             background: #f0f7ff !important; 
         }
 
-        /* 클릭해서 선택된 날짜는 파란색 두 줄 테두리로 선명하게 강조 */
+        /* 클릭해서 선택된 날짜는 파란색 포커스 테두리와 입체 그림자로 강조 */
         .calendar-cell.selected { 
-            border: 2px solid #007bff !important; 
-            background: #e8f4ff !important; 
+            border: 2px solid #2563eb !important; 
+            background: #eff6ff !important; 
+            box-shadow: 0 3px 10px rgba(37,99,235,0.15);
         }
 
-        .calendar-cell.sun .date-num { color: #d9534f; font-weight: 700; }
-        .calendar-cell.sat .date-num { color: #0275d8; font-weight: 700; }
-        .calendar-cell.holiday .date-num { color: #d9534f !important; font-weight: 700; }
-        /* 휴일 이름 글씨 스타일 */
-        .holiday-name { 
-            font-size: 0.78rem; 
-            color: #d9534f; 
-            font-weight: 800; 
-            letter-spacing: -0.5px; 
-            word-break: keep-all; 
-            margin-left: 4px; 
+        .date-num { font-weight: 800; font-size: 0.95rem; padding: 1px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
+        .calendar-cell.sun .date-num { color: #d9534f; font-weight: 800; }
+        .calendar-cell.sat .date-num { color: #0275d8; font-weight: 800; }
+        .calendar-cell.holiday .date-num { color: #d9534f !important; font-weight: 800; }
+        
+        /* 오늘(Today) 날짜 숫자 포인트 배지 */
+        .date-num.today-badge {
+            background: #2563eb !important;
+            color: #fff !important;
+            border-radius: 999px;
+            padding: 1px 7px;
+            font-size: 0.85rem;
+            box-shadow: 0 1px 3px rgba(37,99,235,0.3);
         }
+
+        .holiday-name { font-size: 0.76rem; color: #e11d48; font-weight: 800; letter-spacing: -0.5px; text-align: right; word-break: keep-all; margin-left: 4px; }
+
+        /* 달력 내부 배차 배지: 왼쪽 포인트 컬러 바 스타일 */
         .tag-container { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; flex: 1; width: 100%; }
-        .event-box { display: inline-flex; align-items: center; gap: 1px !important; padding: 2px 2px !important; border-radius: 4px; font-size: 0.8rem !important; letter-spacing: -0.8px !important; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .event-box.pub { background-color: #e8f0fe; border: 1px solid #c6dafc; color: #333; } 
-        .event-box.grave { background-color: #e8f5e9; border: 1px solid #c8e6c9; color: #333; } 
-        .event-box.night1 { background-color: #fff8e1; border: 1px solid #ffecb3; color: #333; } 
-        .event-box.night2 { background-color: #fbe9e7; border: 1px solid #ffccbc; color: #333; } 
-        .event-box.seoul { background-color: #e0f7fa; border: 1px solid #b2ebf2; color: #333; } 
-        .event-box.citytour { background-color: #f3e5f5; border: 1px solid #e1bee7; color: #333; } 
-        .event-box.default { background-color: #f1f3f4; border: 1px solid #d8dbe0; color: #333; }
-        .badge { padding: 2px 4px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-align: center; }
-        .badge.pub { background-color: #007bff; color: #fff; } 
-        .badge.grave { background-color: #28a745; color: #fff; } 
-        .badge.night1 { background-color: #ffc107; color: #000; } 
-        .badge.night2 { background-color: #fd7e14; color: #fff; } 
-        .badge.seoul { background-color: #00bcd4; color: #fff; } 
-        .badge.citytour { background-color: #9c27b0; color: #fff; } 
-        .badge.default { background-color: #6c757d; color: #fff; }
-        .badge.manual-badge { background-color: #dc3545 !important; color: #fff !important; }
-        .early-underline { text-decoration: underline; text-decoration-color: #dc3545; text-underline-offset: 3px; text-decoration-thickness: 2px; }
-        .cal-status { font-size: 0.75rem; margin-top: 2px; letter-spacing: -0.3px; }
-        .status-header { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; }
-        .status-header h3 { margin: 0; font-size: 1.15rem; }
-        .btn-edit-drivers { background: #6c757d; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
-        .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
-        .status-item { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 6px; text-align: center; }
-        .radio-group { margin-top: 8px; display: flex; justify-content: center; gap: 6px; font-size: 0.8rem; }
-        .sidebar-section h3 { margin-bottom: 15px; font-size: 1.15rem; border-bottom: 2px solid #007bff; padding-bottom: 8px; }
-        .vehicle-item { border: 1px solid #e1e4e8; border-radius: 6px; margin-bottom: 10px; background: #fafbfc; overflow: hidden; }
-        .vehicle-header { display: flex; align-items: center; padding: 14px 12px; cursor: pointer; gap: 10px; font-weight: 600; font-size: 1rem; }
-        .vehicle-body { display: none; padding: 15px; border-top: 1px solid #e1e4e8; background: #fff; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: #555; font-weight: 600; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; font-family: inherit; }
-        .form-group select:disabled { background-color: #e9ecef; cursor: not-allowed; }
-        .chk-group label { color: #d9534f; cursor: pointer; font-weight: 700; display:flex; align-items:center; gap:6px; }
-        .result-list { list-style: none; padding: 0; margin-top: 10px; }
-        .result-list li { background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; margin-bottom: 8px; border-radius: 4px; font-size: 0.95rem; line-height: 1.5; }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: 700; color: #007bff; flex-direction: column; gap: 10px; }
-        .modal-overlay-custom { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9000; display: none; justify-content: center; align-items: center; }
-        .modal-card { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
-        .modal-card h4 { margin-bottom: 10px; font-size: 1.1rem; color: #d9534f; }
-        .modal-card p { font-size: 0.8rem; color: #666; margin-bottom: 15px; }
+        .event-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px !important;
+            padding: 2.5px 4px !important;
+            border-radius: 4px;
+            font-size: 0.79rem !important;
+            letter-spacing: -0.7px !important;
+            font-weight: 700;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .event-box.pub { background-color: #eff6ff; border-left: 3.5px solid #2563eb; color: #1e293b; } 
+        .event-box.grave { background-color: #f0fdf4; border-left: 3.5px solid #16a34a; color: #1e293b; } 
+        .event-box.night1 { background-color: #fffbeb; border-left: 3.5px solid #f59e0b; color: #1e293b; } 
+        .event-box.night2 { background-color: #fff7ed; border-left: 3.5px solid #ea580c; color: #1e293b; } 
+        .event-box.seoul { background-color: #ecfeff; border-left: 3.5px solid #0891b2; color: #1e293b; } 
+        .event-box.citytour { background-color: #faf5ff; border-left: 3.5px solid #9333ea; color: #1e293b; } 
+        .event-box.default { background-color: #f8fafc; border-left: 3.5px solid #64748b; color: #1e293b; }
+
+        .badge { padding: 1.5px 4px; border-radius: 3px; font-size: 0.62rem; font-weight: 800; text-align: center; flex-shrink: 0; }
+        .badge.pub { background-color: #2563eb; color: #fff; } 
+        .badge.grave { background-color: #16a34a; color: #fff; } 
+        .badge.night1 { background-color: #f59e0b; color: #000; } 
+        .badge.night2 { background-color: #ea580c; color: #fff; } 
+        .badge.seoul { background-color: #0891b2; color: #fff; } 
+        .badge.citytour { background-color: #9333ea; color: #fff; } 
+        .badge.default { background-color: #64748b; color: #fff; }
+
+        /* 로그인한 본인 이름 노란 형광펜 강조 */
+        .my-name-hl {
+            background: #fef08a;
+            color: #0f172a !important;
+            font-weight: 900 !important;
+            padding: 0 3px;
+            border-radius: 3px;
+            box-shadow: inset 0 -2px 0 #facc15;
+        }
+        .early-underline { text-decoration: underline; text-decoration-color: #e11d48; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+        
+        /* 달력 칸 하단 당직/휴무 바 */
+        .cal-status { font-size: 0.74rem; line-height: 1.3; letter-spacing: -0.4px; }
+
+        /* 최종 배차 결과 섹션 헤더 (모바일 1줄 유지) */
+        .result-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+        #result-title { margin: 0; font-size: 1.08rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .result-action-btns { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: nowrap; }
+        .result-action-btns button {
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        /* 티켓 스타일 배차 결과 리스트 */
+        .result-list { list-style: none; padding: 0; margin-top: 8px; }
+        .result-list li {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #cbd5e1;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 0.94rem;
+            line-height: 1.55;
+            transition: 0.15s;
+        }
+        .result-list li:hover { background: #f1f5f9; }
+
+        /* 일일 운전자 상태 패널 */
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; gap: 6px; flex-wrap: nowrap; }
+        .status-header h3 { margin: 0; font-size: 1.08rem; font-weight: 800; white-space: nowrap; }
+        .btn-edit-drivers { background: #475569; color: #fff; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 8px; margin-top: 10px; }
+        .status-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 9px 6px; border-radius: 8px; text-align: center; }
+        .radio-group { margin-top: 6px; display: flex; justify-content: center; gap: 5px; font-size: 0.78rem; font-weight: 600; }
+
+        /* 우측 사이드바 및 차량 아코디언 */
+        .sidebar-section h3 { margin-bottom: 12px; font-size: 1.08rem; font-weight: 800; border-bottom: 2px solid #2563eb; padding-bottom: 8px; color: #0f172a; }
+        .vehicle-item { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; background: #f8fafc; overflow: hidden; transition: 0.15s; }
+        .vehicle-item.active-res { border-color: #93c5fd; background: #eff6ff; }
+        .vehicle-header { display: flex; align-items: center; padding: 11px 12px; cursor: pointer; gap: 8px; font-weight: 700; font-size: 0.94rem; }
+        .veh-status-pill {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #2563eb;
+            color: #fff;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        .veh-status-pill.canceled { background: #94a3b8; text-decoration: line-through; }
+        .vehicle-body { display: none; padding: 14px; border-top: 1px solid #e2e8f0; background: #fff; }
+        .form-group { margin-bottom: 11px; }
+        .form-group label { display: block; font-size: 0.82rem; margin-bottom: 5px; color: #475569; font-weight: 700; }
+        .form-group input, .form-group select { width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.92rem; font-family: inherit; }
+        .form-group select:disabled { background-color: #f1f5f9; cursor: not-allowed; }
+        .chk-group label { color: #e11d48; cursor: pointer; font-weight: 800; display:flex; align-items:center; gap:6px; }
+
+        /* 로딩 & 모달 */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.15rem; font-weight: 800; color: #2563eb; flex-direction: column; gap: 10px; }
+        .modal-overlay-custom { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6); z-index: 9000; display: none; justify-content: center; align-items: center; padding: 12px; }
+        .modal-card { background: #fff; padding: 20px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-card h4 { margin-bottom: 10px; font-size: 1.1rem; color: #e11d48; font-weight: 800; }
+        .modal-card p { font-size: 0.8rem; color: #64748b; margin-bottom: 15px; }
         .edit-list { list-style: none; margin-bottom: 15px; max-height: 250px; overflow-y: auto; }
-        .edit-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #eee; margin-bottom: 4px; background: #fafbfc; border-radius: 4px; font-weight: 600; }
+        .edit-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #e2e8f0; margin-bottom: 4px; background: #f8fafc; border-radius: 6px; font-weight: 700; }
         .edit-list button { padding: 4px 8px; margin-left: 4px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-up { background: #e2e3e5; }
-        .btn-del { background: #f8d7da; color: #721c24; }
-        .add-box { display: flex; gap: 5px; margin-bottom: 15px; }
-        .add-box input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
-        .add-box button { padding: 8px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .modal-btns { display: flex; gap: 10px; }
-        .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .btn-up { background: #e2e8f0; color: #334155; }
+        .btn-del { background: #fee2e2; color: #991b1b; }
+        .add-box { display: flex; gap: 6px; margin-bottom: 15px; }
+        .add-box input { flex: 1; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; }
+        .add-box button { padding: 8px 14px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; }
+        .modal-btns { display: flex; gap: 8px; }
+        .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; }
+
+        /* 모바일 최적화 */
         @media (max-width: 768px) {
-            .dispatch-container { flex-direction: column; padding: 10px; margin: 10px auto; gap: 10px; }
-            .sidebar-section { width: 100%; padding: 15px; }
-            .event-box { font-size: 0.75rem; padding: 2px 4px; }
-            .status-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .top-navbar { padding: 8px 10px; margin-top: 4px; }
+            .user-profile-pill { padding: 5px 10px; }
+            #welcome-msg { font-size: 0.86rem; }
+            .nav-pill-btn { padding: 5px 10px; font-size: 0.76rem; }
+
+            .dispatch-container { flex-direction: column; padding: 0 8px; margin: 6px auto 20px; gap: 12px; }
+            .card { padding: 12px; border-radius: 12px; }
+            .sidebar-section { width: 100%; padding: 14px; border-radius: 12px; }
+
+            #month-display { font-size: 1.08rem; }
+            .btn-today-chip { padding: 2px 6px; font-size: 0.7rem; }
+            .cal-ctrl-btns button { padding: 4px 7px; font-size: 0.75rem; }
+
+            .event-box { font-size: 0.75rem !important; padding: 2px 3px !important; }
+            #result-title { font-size: 0.95rem; }
+            .result-action-btns button { padding: 4px 7px; font-size: 0.72rem; }
+            .status-header h3 { font-size: 0.96rem; }
+            .btn-edit-drivers { padding: 4px 8px; font-size: 0.72rem; }
         }
     </style>
 </head>
@@ -148,10 +356,10 @@
 
     <div id="login-container">
         <div class="login-card">
-            <h2>배차 시스템 로그인</h2>
+            <h2>🚌 배차관리 시스템</h2>
             <input type="text" id="login-id" class="login-input" placeholder="이름 (또는 아이디) 입력" autocomplete="off" onkeypress="if(event.key==='Enter') handleLogin()">
             <input type="password" id="login-pw" class="login-input" placeholder="비밀번호 입력" autocomplete="new-password" onkeypress="if(event.key==='Enter') handleLogin()">
-            <button id="btn-login" class="btn-login" onclick="handleLogin()">접속하기</button>
+            <button id="btn-login" class="btn-login" onclick="handleLogin()">로그인</button>
         </div>
     </div>
 
@@ -162,11 +370,11 @@
             <div class="modal-card">
                 <h4>운전원 명단 및 엔진 설정</h4>
                 <p id="modal-date-text"></p>
-                <div style="background: #e8f0fe; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
-                    <label style="font-weight: 700; color: #0056b3; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <div style="background: #eff6ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe;">
+                    <label style="font-weight: 800; color: #1d4ed8; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="use-b-engine" style="width: 18px; height: 18px;"> B엔진 (업무별 우선 배차) 사용
                     </label>
-                    <p style="font-size: 0.75rem; color: #555; margin-top: 6px; margin-bottom: 0;">※ 1순위(공공/1박), 2순위(성묘), 3순위(시티) 업무별로 차례대로 분류 후, 차량 번호순(1~14호차) 직진 배차합니다.</p>
+                    <p style="font-size: 0.75rem; color: #475569; margin-top: 6px; margin-bottom: 0;">※ 1순위(공공/1박), 2순위(성묘), 3순위(시티) 업무별로 차례대로 분류 후, 차량 번호순(1~14호차) 직진 배차합니다.</p>
                 </div>
                 <ul class="edit-list" id="edit-list-ul"></ul>
                 <div class="add-box">
@@ -174,72 +382,73 @@
                     <button onclick="addDriverToList()">추가</button>
                 </div>
                 <div class="modal-btns">
-                    <button style="background: #007bff; color:#fff;" onclick="saveDriverList()">변경 저장</button>
-                    <button style="background: #ccc;" onclick="closeDriverModal()">취소</button>
+                    <button style="background: #2563eb; color:#fff;" onclick="saveDriverList()">변경 저장</button>
+                    <button style="background: #cbd5e1; color:#1e293b;" onclick="closeDriverModal()">취소</button>
                 </div>
             </div>
         </div>
 
         <div id="pw-modal-overlay" class="modal-overlay-custom" onclick="closePwModal()">
             <div class="modal-card" style="max-width: 320px;" onclick="event.stopPropagation()">
-                <h4 style="color: #007bff; margin-bottom:15px;">🔑 비밀번호 변경</h4>
+                <h4 style="color: #2563eb; margin-bottom:15px;">🔑 비밀번호 변경</h4>
                 <div class="form-group"><input type="password" id="current-pw" placeholder="현재 비밀번호"></div>
                 <div class="form-group"><input type="password" id="new-pw" placeholder="새 비밀번호 (4자리 이상)"></div>
                 <div class="form-group"><input type="password" id="new-pw-confirm" placeholder="새 비밀번호 확인"></div>
                 <div class="modal-btns" style="margin-top: 15px;">
-                    <button style="background: #28a745; color:#fff;" onclick="changePassword()">변경 저장</button>
-                    <button style="background: #ccc;" onclick="closePwModal()">취소</button>
+                    <button style="background: #10b981; color:#fff;" onclick="changePassword()">변경 저장</button>
+                    <button style="background: #cbd5e1; color:#1e293b;" onclick="closePwModal()">취소</button>
                 </div>
             </div>
         </div>
 
         <div id="detail-modal-overlay" class="modal-overlay-custom" onclick="closeDetailModal()">
-            <div class="modal-card" style="max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
-                <h4 id="detail-modal-title" style="color: #007bff; font-size: 1.3rem; margin-bottom: 15px;"></h4>
-                <div style="font-size: 1.05rem; line-height: 2; margin-bottom: 15px;">
-                    <p style="margin:0;"><span style="color:#888; display:inline-block; width:65px;">운전원</span> <b id="detail-modal-drivers" style="color:#333;"></b></p>
-                    <p style="margin:0;"><span style="color:#888; display:inline-block; width:65px;">내 용</span> <b id="detail-modal-dest" style="color:#d9534f;"></b></p>
+            <div class="modal-card" style="max-width: 500px;" onclick="event.stopPropagation()">
+                <h4 id="detail-modal-title" style="color: #2563eb; font-size: 1.2rem; margin-bottom: 12px;"></h4>
+                <div style="font-size: 0.98rem; line-height: 1.8; margin-bottom: 14px; background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <p style="margin:0;"><span style="color:#64748b; display:inline-block; width:60px; font-weight:700;">운전원</span> <b id="detail-modal-drivers" style="color:#0f172a;"></b></p>
+                    <p style="margin:0;"><span style="color:#64748b; display:inline-block; width:60px; font-weight:700;">운행경로</span> <b id="detail-modal-dest" style="color:#e11d48;"></b></p>
                 </div>
-                <div id="settlement-container" style="background:#f0fdf4; border:2px solid #28a745; border-radius:6px; padding:15px; margin-bottom:15px;">
-                    <h5 id="settle-user-title" style="margin-bottom:10px; color:#155724; font-size:1.05rem;">운행 시간 입력</h5>
+                <div id="settlement-container" style="background:#f0fdf4; border:1.5px solid #16a34a; border-radius:8px; padding:14px; margin-bottom:15px;">
+                    <h5 id="settle-user-title" style="margin-bottom:10px; color:#15803d; font-size:1rem; font-weight:800;">운행 시간 입력</h5>
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                        <label style="font-weight:bold; cursor:pointer; color:#d9534f;">
-                            <input type="checkbox" id="settle-early" style="transform:scale(1.2); margin-right:5px;"> 선운행 (달력에 빨간 밑줄 표시)
+                        <label style="font-weight:800; cursor:pointer; color:#e11d48; font-size:0.9rem;">
+                            <input type="checkbox" id="settle-early" style="transform:scale(1.15); margin-right:5px;"> 선운행 (달력에 빨간 밑줄 표시)
                         </label>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom:5px;">
                         <div style="flex:1;">
-                            <label style="font-size:0.85rem; font-weight:bold; color:#555;">출근 (예: 7.5)</label>
-                            <input type="number" id="settle-in" step="0.1" placeholder="7.5" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:5px;">
+                            <label style="font-size:0.82rem; font-weight:700; color:#475569;">출근 (예: 7.5)</label>
+                            <input type="number" id="settle-in" step="0.1" placeholder="7.5" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin-top:4px;">
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:0.85rem; font-weight:bold; color:#555;">퇴근 (예: 18.5)</label>
-                            <input type="number" id="settle-out" step="0.1" placeholder="18.5" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:5px;">
+                            <label style="font-size:0.82rem; font-weight:700; color:#475569;">퇴근 (예: 18.5)</label>
+                            <input type="number" id="settle-out" step="0.1" placeholder="18.5" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; margin-top:4px;">
                         </div>
                     </div>
-                    <p style="font-size:0.75rem; color:#888; margin-top:5px; margin-bottom:0;">※ 휴게 차감, 주말/평일 초과배율 및 일비가 자동 계산됩니다.</p>
-                    <div style="display: flex; gap: 8px; margin-top: 15px;">
-                        <button onclick="saveSettlement()" style="flex: 1; padding:12px; background:#28a745; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:1rem;">입 력 (저장)</button>
-                        <button onclick="deleteSettlement()" style="padding:12px 15px; background:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9rem; white-space: nowrap;">🗑️ 삭제</button>
+                    <p style="font-size:0.74rem; color:#64748b; margin-top:5px; margin-bottom:0;">※ 휴게 차감, 주말/평일 초과배율 및 일비가 자동 계산됩니다.</p>
+                    <div style="display: flex; gap: 8px; margin-top: 12px;">
+                        <button onclick="saveSettlement()" style="flex: 1; padding:11px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.95rem;">입 력 (저장)</button>
+                        <button onclick="deleteSettlement()" style="padding:11px 14px; background:#ef4444; color:#fff; border:none; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.88rem; white-space: nowrap;">🗑️ 삭제</button>
                     </div>
                     <input type="hidden" id="settle-res-id">
                     <input type="hidden" id="settle-date">
                 </div>
                 <div id="detail-modal-img-container" style="text-align: center; margin-bottom: 15px; display: none;"></div>
                 <div style="text-align: right;">
-                    <button style="padding: 8px 20px; background: #6c757d; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="closeDetailModal()">닫기</button>
+                    <button style="padding: 8px 20px; background: #64748b; color: #fff; border: none; border-radius: 6px; font-weight: 800; cursor: pointer;" onclick="closeDetailModal()">닫기</button>
                 </div>
             </div>
         </div>
 
-        <div style="max-width: 1600px; margin: 10px auto 0; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-            <div onclick="openPwModal()" style="cursor: pointer; display: flex; align-items: center; gap: 5px;" title="비밀번호 변경">
-                <span id="welcome-msg" style="font-weight: bold; color: #333; font-size: 1.15rem;"></span>
-                <span style="font-size: 1.2rem; opacity: 0.8;">⚙️</span>
+        <div class="top-navbar">
+            <div class="user-profile-pill" onclick="openPwModal()" title="비밀번호 변경">
+                <span id="welcome-msg"></span>
+                <span style="font-size: 0.95rem;">⚙️</span>
             </div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-                <button onclick="location.href='stats.html'" style="background: #6f42c1; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">집계</button>
-                <button onclick="logout()" style="background: #dc3545; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; line-height: 1.2; cursor: pointer;">로그아웃</button>
+            <div class="top-nav-btns">
+                <button class="nav-pill-btn maint" onclick="location.href='maintenance.html'">🔧 정비</button>
+                <button class="nav-pill-btn stats" onclick="location.href='stats.html'">📊 집계</button>
+                <button class="nav-pill-btn logout" onclick="logout()">로그아웃</button>
             </div>
         </div>
 
@@ -247,10 +456,12 @@
             <div class="main-section">
                 <div class="card">
                     <div class="calendar-header">
-                        <span id="month-display" onclick="goToToday()" style="cursor:pointer;" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
-                        <div style="display: flex; gap: 4px; align-items: center;">
-                            <button onclick="location.href='maintenance.html'" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">정비</button>
-                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">PC버전</button>
+                        <div class="month-title-wrap">
+                            <span id="month-display" onclick="goToToday()" title="클릭하면 오늘 날짜로 이동합니다">26년 10월</span>
+                            <button class="btn-today-chip" onclick="goToToday()">오늘</button>
+                        </div>
+                        <div class="cal-ctrl-btns">
+                            <button id="btn-toggle-view" onclick="toggleViewMode()" style="background: #0ea5e9; color: white; border: none;">PC버전</button>
                             <button onclick="changeMonth(-1)">＜</button>
                             <button onclick="changeMonth(1)">＞</button>
                         </div>
@@ -259,34 +470,34 @@
                 </div>
 
                 <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
-                        <h3 id="result-title" style="margin:0;">최종 배차 결과</h3>
-                        <div style="display: flex; gap: 6px;">
-                            <button id="btn-holiday" onclick="handleHoliday()" style="background:#dc3545; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">📅 휴일지정</button>
-                            <button id="btn-memo" onclick="handleMemo()" style="background:#ffc107; color:#000; border:1px solid #e0a800; border-radius:4px; padding:4px 8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">📝 공지/메모</button>
+                    <div class="result-header-bar">
+                        <h3 id="result-title">최종 배차 결과</h3>
+                        <div class="result-action-btns">
+                            <button id="btn-holiday" onclick="handleHoliday()" style="background:#ef4444; color:#fff; border:none;">📅 휴일지정</button>
+                            <button id="btn-memo" onclick="handleMemo()" style="background:#facc15; color:#0f172a; border:1px solid #eab308;">📝 공지/메모</button>
                         </div>
                     </div>
-                    <p style="font-size: 0.8rem; color: #007bff; margin-bottom: 8px; font-weight: 600;">💡 배차 내역(또는 달력 배지)을 누르면 운행 시간(정산) 입력 및 첨부파일 확인이 가능합니다.</p>
+                    <p style="font-size: 0.78rem; color: #2563eb; margin-bottom: 8px; font-weight: 700;">💡 배차 내역(또는 달력 배지)을 터치하면 운행 시간(정산) 입력 및 첨부 신청서 확인이 가능합니다.</p>
                     <ul id="result-content" class="result-list">
-                        <li style="color:#666;">선택된 날짜의 예약 내역이 없습니다.</li>
+                        <li style="color:#64748b;">선택된 날짜의 예약 내역이 없습니다.</li>
                     </ul>
                     <div class="status-header">
                         <h3>일일 운전자 상태</h3>
-                        <button class="btn-edit-drivers" onclick="openDriverEditModal()">⚙️ 운전원 순번/명단 관리</button>
+                        <button class="btn-edit-drivers" onclick="openDriverEditModal()">⚙️ 순번/명단 관리</button>
                     </div>
                     <div class="status-grid" id="status-container"></div>
                 </div>
             </div>
 
             <div class="sidebar-section">
-                <div id="monthly-summary-container" style="margin-bottom: 25px;"></div>
+                <div id="monthly-summary-container" style="margin-bottom: 22px;"></div>
 
-                <div style="margin-bottom: 20px; background: #e8f0fe; padding: 12px; border-radius: 6px; border: 1px dashed #007bff;">
+                <div style="margin-bottom: 18px; background: #eff6ff; padding: 12px; border-radius: 10px; border: 1px dashed #3b82f6;">
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <label style="margin: 0; font-size: 1rem; font-weight: 800; color: #0056b3;">📎 이 날짜의 신청서 추가</label>
-                        <input type="file" id="daily-upload-file" accept="image/*,.pdf" style="font-size: 0.85rem; cursor: pointer; width: 100%; background: #fff; padding: 4px; border-radius: 4px; border: 1px solid #ccc;" onchange="uploadDailyFile()">
+                        <label style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #1d4ed8;">📎 이 날짜의 신청서 추가</label>
+                        <input type="file" id="daily-upload-file" accept="image/*,.pdf" style="font-size: 0.82rem; cursor: pointer; width: 100%; background: #fff; padding: 5px; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="uploadDailyFile()">
                     </div>
-                    <div id="daily-upload-status" style="font-size: 0.85rem; color: #dc3545; font-weight: bold; margin-top: 8px; display: none;">🚀 서버에 올리는 중입니다...</div>
+                    <div id="daily-upload-status" style="font-size: 0.82rem; color: #e11d48; font-weight: 800; margin-top: 8px; display: none;">🚀 서버에 올리는 중입니다...</div>
                     <ul id="daily-attachment-list" style="list-style: none; padding: 0; margin: 8px 0 0 0;"></ul>
                 </div>
 
@@ -295,16 +506,19 @@
                     const busList = ['1호차', '2호차', '3호차', '예비버스'];
                     const solatiList = ['11호차', '12호차', '13호차', '14호차', '3818'];
                     const formTemplate = (v, isBus) => `
-                        <div class="vehicle-item">
+                        <div class="vehicle-item" id="item_${v}">
                             <div class="vehicle-header">
                                 <input type="checkbox" id="v_${v}" onclick="toggleVehicleForm('${v}', this, ${isBus})">
-                                <label for="v_${v}" style="cursor: pointer; flex: 1;">${v} (${v === '3818' ? '스타리아' : (isBus ? '버스' : '쏠라티')})</label>
+                                <label for="v_${v}" style="cursor: pointer; flex: 1; display:flex; align-items:center; gap:6px;">
+                                    <span>${v} <span style="font-size:0.8rem; color:#64748b; font-weight:600;">(${v === '3818' ? '스타리아' : (isBus ? '버스' : '쏠라티')})</span></span>
+                                    <span id="status_pill_${v}" class="veh-status-pill" style="display:none;"></span>
+                                </label>
                             </div>
                             <div class="vehicle-body" id="form_${v}">
-                                <div style="display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 12px;">
-                                    <button style="flex: 1.2; background: #007bff; color: white; border: none; padding: 6px 2px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.8rem;" onclick="makeReservation('${v}', ${isBus})">예약 등록</button>
-                                    <button style="flex: 1; background: #dc3545; color: white; border: none; padding: 6px 2px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.8rem;" onclick="cancelReservation('${v}')">취소</button>
-                                    <button style="flex: 1.2; background: #6c757d; color: white; border: none; padding: 6px 2px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.7rem; letter-spacing: -0.5px;" onclick="cancelBefore4Days('${v}')">4일전 취소</button>
+                                <div style="display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 12px;">
+                                    <button style="flex: 1.2; background: #2563eb; color: white; border: none; padding: 7px 2px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.8rem;" onclick="makeReservation('${v}', ${isBus})">예약 등록</button>
+                                    <button style="flex: 1; background: #ef4444; color: white; border: none; padding: 7px 2px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.8rem;" onclick="cancelReservation('${v}')">취소</button>
+                                    <button style="flex: 1.2; background: #64748b; color: white; border: none; padding: 7px 2px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.74rem; letter-spacing: -0.5px;" onclick="cancelBefore4Days('${v}')">4일전 취소</button>
                                 </div>
                                 <div class="form-group">
                                     <label>운행 형태</label>
@@ -321,7 +535,7 @@
                                         <option value="기타(외곽)">기타(외곽)</option>
                                     </select>
                                 </div>
-                                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 11px;">
                                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                         <label>출발지</label>
                                         <input type="text" id="start_${v}" autocomplete="off" list="start-place-list">
@@ -331,8 +545,8 @@
                                         <input type="text" id="end_${v}" autocomplete="off" list="end-place-list">
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                                    <div class="form-group" style="flex: 1.5; margin-bottom: 0;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 11px;">
+                                    <div class="form-group" style="flex: 1.4; margin-bottom: 0;">
                                         <label>거리 (km)</label>
                                         <input type="number" id="km_${v}" value="0">
                                     </div>
@@ -341,20 +555,20 @@
                                         <input type="text" id="dest_${v}">
                                     </div>
                                 </div>
-                                <div class="form-group" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #007bff; margin-top:15px;">
-                                    <label style="color: #007bff; font-weight:700;">📎 신청서 연결 (선택 시 출발/도착/단체명 자동입력)</label>
-                                    <select id="photo_select_${v}" class="daily-photo-selector" onchange="onSelectDailyPhoto('${v}', this)" style="width: 100%; padding: 6px; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+                                <div class="form-group" style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #93c5fd; margin-top:12px;">
+                                    <label style="color: #1d4ed8; font-weight:800;">📎 신청서 연결 (선택 시 자동입력)</label>
+                                    <select id="photo_select_${v}" class="daily-photo-selector" onchange="onSelectDailyPhoto('${v}', this)" style="width: 100%; padding: 6px; font-size: 0.84rem; border: 1px solid #cbd5e1; border-radius: 4px; margin-top: 4px;">
                                         <option value="">연결 안 함 (선택)</option>
                                     </select>
                                 </div>
-                                <div style="border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 10px;">
-                                    <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:center; margin-bottom:12px; background:#e8f0fe; padding:6px 10px; border-radius:4px;">
+                                <div style="border-top: 1px dashed #cbd5e1; margin-top: 14px; padding-top: 10px;">
+                                    <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:10px; background:#eff6ff; padding:6px 10px; border-radius:6px;">
                                         ${isBus ? `<div class="form-group chk-group" id="single_box_${v}" style="margin-bottom:0;"><label><input type="checkbox" id="single_${v}"> 1인 배차</label></div>` : ''}
-                                        <div class="form-group chk-group" style="margin-bottom:0; color:#007bff;">
+                                        <div class="form-group chk-group" style="margin-bottom:0; color:#2563eb;">
                                             <label><input type="checkbox" id="manual_${v}" onchange="toggleManual('${v}', ${isBus})"> 수동 배차</label>
                                         </div>
                                     </div>
-                                    <div style="display:flex; gap:10px; margin-bottom:12px;">
+                                    <div style="display:flex; gap:8px; margin-bottom:10px;">
                                         <div class="form-group" style="flex:1; margin-bottom:0;">
                                             <label>운전원 1</label>
                                             <select id="driver1_${v}" disabled>
@@ -371,8 +585,8 @@
                                             </select>
                                         </div>` : ''}
                                     </div>
-                                    <div class="form-group" style="margin-top:10px; border-top: 1px dashed #eee; padding-top:10px;">
-                                        <label style="color:#d9534f;">이 배차 직후, 다음 순번 지정 (선택)</label>
+                                    <div class="form-group" style="margin-top:8px; border-top: 1px dashed #e2e8f0; padding-top:8px;">
+                                        <label style="color:#e11d48;">이 배차 직후, 다음 순번 지정 (선택)</label>
                                         <select id="next_pointer_${v}">
                                             <option value="">자동 유지 (지정 안함)</option>
                                         </select>
@@ -442,9 +656,10 @@
         let engineModifiers = {}; 
         
         const _now = new Date();
+        const todayStrGlobal = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
         let currentYear = _now.getFullYear(); 
         let currentMonth = _now.getMonth(); 
-        let currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`; 
+        let currentDate = todayStrGlobal; 
         
         let dailyDriverStatus = {}; 
         let autoDutyByDate = {};
@@ -492,7 +707,7 @@
                 if (doc.exists && doc.data().pw) { realPw = doc.data().pw; }
             } catch (error) { console.error("인증 통신 오류", error); }
 
-            btn.innerText = '접속하기';
+            btn.innerText = '로그인';
             btn.disabled = false;
 
             if (pw !== realPw) {
@@ -625,9 +840,8 @@
             });
         }
 
-        // 오래된 파일 자동 파기는 하루 1회만 실행하여 DB 읽기 폭증 차단
         async function cleanUpOldFiles(reservations) {
-            const todayKey = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+            const todayKey = todayStrGlobal;
             if (localStorage.getItem('lastCleanUpDate') === todayKey) return;
             localStorage.setItem('lastCleanUpDate', todayKey);
 
@@ -1388,7 +1602,7 @@
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-cell" style="background:#f4f6f9; cursor:default;"></div>`;
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-cell" style="background:#f8fafc; cursor:default; border-color:#f1f5f9;"></div>`;
 
             for (let d = 1; d <= lastDate; d++) {
                 const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -1400,13 +1614,15 @@
                 if (holidayName) { extraClass += 'holiday '; extraHTML = `<span class="holiday-name">${holidayName}</span>`; }
                 if (dateStr === currentDate) extraClass += 'selected ';
 
+                const isTodayNum = (dateStr === todayStrGlobal) ? 'today-badge' : '';
+
                 grid.innerHTML += `
                     <div class="calendar-cell ${extraClass}" id="cell_${dateStr}" data-date="${dateStr}" onclick="selectDate('${dateStr}', false)">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <span class="date-num">${d}</span>${extraHTML}
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="date-num ${isTodayNum}">${d}</span>${extraHTML}
                         </div>
                         <div class="tag-container" id="tags_${dateStr}"></div>
-                        <div id="cell_status_${dateStr}" style="margin-top:auto; padding-top:4px; border-top:1px dashed #eee; display:none; flex-direction:column; gap:2px;"></div>
+                        <div id="cell_status_${dateStr}" style="margin-top:auto; padding-top:4px; border-top:1px dashed #e2e8f0; display:none; flex-direction:column; gap:2px;"></div>
                     </div>`;
             }
             for (let d = 1; d <= lastDate; d++) updateCalendarCellUI(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
@@ -1420,11 +1636,12 @@
             const activeReservations = allReservations.filter(r => (r.dates || []).includes(date));
             let tagsHTML = '';
 
+            // 🚀 메모 배지만 단독으로 선명한 빨간색(#dc2626) 적용
             if (typeof dailyMemos !== 'undefined' && dailyMemos[date]) {
                 tagsHTML += `
-                    <div class="event-box" style="background-color: #fce4ec; border: 1px solid #f8bbd0; width: 100%; max-width: 100%; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 4px; margin-bottom: 3px; border-radius: 4px;" title="${dailyMemos[date]}">
-                        <span class="badge" style="background-color: transparent; color: #dc3545; border: 1px solid #dc3545;">메모</span>
-                        <span style="color: #d81b60; font-weight: 800; margin-left: 4px;">${dailyMemos[date]}</span>
+                    <div class="event-box" style="background-color: #fef2f2; border: 1px solid #fecaca; border-left: 3.5px solid #dc2626; width: 100%; max-width: 100%; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2.5px 4px; margin-bottom: 3px; border-radius: 4px;" title="${dailyMemos[date]}">
+                        <span class="badge" style="background-color: #dc2626; color: #fff;">메모</span>
+                        <span style="color: #991b1b; font-weight: 800; margin-left: 3px;">${dailyMemos[date]}</span>
                     </div>`;
             }
 
@@ -1440,26 +1657,26 @@
                 else if (shortTypeStr === '시티' || shortTypeStr === '시티(야)') { boxClass = 'citytour'; badgeClass = 'citytour'; }
                 else if (shortTypeStr === '기타') { boxClass = 'default'; badgeClass = 'default'; }
 
-                if (d.isManual) badgeClass = 'manual-badge';
+                // 수동배차여도 원래 운행 형태의 기본 배지 색상 그대로 유지
 
-                let canceledBoxStyle = d.isCanceled ? 'background-color: transparent; border: 1px dashed #adb5bd; color: #adb5bd; text-decoration: line-through;' : '';
-                let canceledBadgeStyle = d.isCanceled ? 'background-color: transparent; color: #adb5bd; border: 1px solid #adb5bd;' : '';
+                let canceledBoxStyle = d.isCanceled ? 'background-color: transparent; border: 1px dashed #cbd5e1; color: #94a3b8; text-decoration: line-through;' : '';
+                let canceledBadgeStyle = d.isCanceled ? 'background-color: transparent; color: #94a3b8; border: 1px solid #cbd5e1;' : '';
                 
                 let assignedNamesHTML = (d.assigned || []).map(name => {
                     let isUnderline = (d.settlement && d.settlement[name] && d.settlement[name][date] && d.settlement[name][date].isEarly) || false;
                     let dispName = name;
                     if (name === currentUser && !d.isCanceled) {
-                        dispName = `<span style="color:#0056b3; font-weight:900;">${dispName}</span>`;
+                        dispName = `<span class="my-name-hl">${dispName}</span>`;
                     }
                     return (isUnderline && !d.isCanceled && name !== '미지정') ? `<span class="early-underline">${dispName}</span>` : dispName;
                 }).join(', ');
 
-                let attachIcon = d.photoUrl ? ' <span style="font-size:0.8rem;">📎</span>' : '';
+                let attachIcon = d.photoUrl ? ' <span style="font-size:0.75rem;">📎</span>' : '';
 
                 tagsHTML += `
                     <div class="event-box ${boxClass}" style="${canceledBoxStyle}; cursor:pointer;" onclick="showDispatchDetail(event, '${d.id}', '${date}')">
                         <span class="badge ${badgeClass}" style="${canceledBadgeStyle}">${shortTypeStr}</span> 
-                        ${d.vehicle}: ${assignedNamesHTML}${attachIcon}
+                        <span>${d.vehicle}: ${assignedNamesHTML}${attachIcon}</span>
                     </div>`;
             });
 
@@ -1471,11 +1688,11 @@
 
             let statusHTML = '';
             if (dutyDrivers.length > 0) {
-                statusHTML += `<div class="cal-status duty"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
+                statusHTML += `<div class="cal-status duty"><span style="color:#d97706; font-weight:800;">당직: ${dutyDrivers.join(', ')}</span></div>`;
             }
             if (offDrivers.length > 0) {
                 let offNames = offDrivers.map(n => getDispName(n)).join(', ');
-                statusHTML += `<div class="cal-status off"><span style="color:#d9534f; font-weight:700;">휴무: </span><span class="names" style="color:#007bff; font-weight:700;">${offNames}</span></div>`;
+                statusHTML += `<div class="cal-status off"><span style="color:#e11d48; font-weight:800;">휴무: </span><span class="names" style="color:#2563eb; font-weight:800;">${offNames}</span></div>`;
             }
             
             if (statusHTML !== '') {
@@ -1498,7 +1715,7 @@
             document.getElementById('detail-modal-title').innerText = `[${dispVehicle}] ${d.type} (${clickedDate})`;
             document.getElementById('detail-modal-drivers').innerText = assigned;
             
-            let routeText = `[${d.start || '미입력'} ➔ ${d.end || '미입력'}]${d.dest ? `<br>${d.dest}` : ''}`;
+            let routeText = `[${d.start || '미입력'} ➔ ${d.end || '미입력'}]${d.dest ? `<br><span style="color:#334155; font-size:0.9rem;">${d.dest}</span>` : ''}`;
             document.getElementById('detail-modal-dest').innerHTML = routeText; 
 
             document.getElementById('settle-user-title').innerText = `👤 ${currentUser}님 운행 시간(정산) 입력`;
@@ -1516,23 +1733,23 @@
             const limitStr = `${limitDate.getFullYear()}-${String(limitDate.getMonth() + 1).padStart(2, '0')}-${String(limitDate.getDate()).padStart(2, '0')}`;
             
             if (d.startDate < limitStr && !d.photoUrl) {
-                imgContainer.innerHTML = `<p style="color:#d9534f; font-size:0.9rem; font-weight:bold; background:#fff3cd; padding:10px; border-radius:6px;">🛡️ 보안 및 용량 관리를 위해 자동 파기된 문서입니다.</p>`;
+                imgContainer.innerHTML = `<p style="color:#e11d48; font-size:0.88rem; font-weight:bold; background:#fff1f2; padding:10px; border-radius:6px;">🛡️ 보안 및 용량 관리를 위해 자동 파기된 문서입니다.</p>`;
                 imgContainer.style.display = 'block';
             } else if (d.photoUrl) {
                 const isImg = d.photoUrl.match(/\.(jpeg|jpg|png|gif|webp)(?:\?|$)/i);
                 if (isImg) {
                     imgContainer.innerHTML = `
                         <a href="${d.photoUrl}" target="_blank" style="display:block; text-decoration:none;">
-                            <img src="${d.photoUrl}" style="width: 100%; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <img src="${d.photoUrl}" style="width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                         </a>
-                        <p style="font-size:0.75rem; color:#888; margin-top:8px;">👆 사진을 누르면 원본 크기로 확대해서 볼 수 있습니다.</p>
+                        <p style="font-size:0.75rem; color:#64748b; margin-top:6px;">👆 사진을 터치하면 원본 크기로 확대해서 볼 수 있습니다.</p>
                     `;
                 } else {
-                    imgContainer.innerHTML = `<a href="${d.photoUrl}" target="_blank" style="display:inline-block; padding:12px 20px; background:#007bff; color:#fff; border-radius:6px; font-weight:bold; text-decoration:none;">📄 첨부된 문서 열기 / 다운로드</a>`;
+                    imgContainer.innerHTML = `<a href="${d.photoUrl}" target="_blank" style="display:inline-block; padding:11px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:800; text-decoration:none;">📄 첨부된 문서 열기 / 다운로드</a>`;
                 }
                 imgContainer.style.display = 'block';
             } else {
-                imgContainer.innerHTML = '<p style="color:#888; font-size:0.9rem;">첨부된 파일이 없습니다.</p>';
+                imgContainer.innerHTML = '<p style="color:#64748b; font-size:0.88rem;">첨부된 파일이 없습니다.</p>';
                 imgContainer.style.display = 'block';
             }
 
@@ -1701,13 +1918,13 @@
             let listHtml = '';
             monthData.forEach(item => {
                 hasData = true;
-                listHtml += `<li style="padding: 10px; border-bottom: 1px solid #eee;">
-                <span style="color:#333; font-weight:bold; font-size:0.85rem; display:inline-block; width:39px;">${currentMonth + 1}/${item.day}</span>
-                <span style="color:#555; font-size:0.80rem;">보상: 
-                    <b style="color:#007bff; display:inline-block; width:39px; text-align:right;">${Number(item.overtime || 0).toFixed(2)}</b> 
-                    <span style="color:#ccc; margin:0 4px;">:</span> 
+                listHtml += `<li style="padding: 9px 10px; border-bottom: 1px solid #e2e8f0; border-left: 3px solid #2563eb; margin-bottom:4px;">
+                <span style="color:#0f172a; font-weight:800; font-size:0.84rem; display:inline-block; width:38px;">${currentMonth + 1}/${item.day}</span>
+                <span style="color:#475569; font-size:0.8rem;">보상: 
+                    <b style="color:#2563eb; display:inline-block; width:38px; text-align:right;">${Number(item.overtime || 0).toFixed(2)}</b> 
+                    <span style="color:#cbd5e1; margin:0 4px;">|</span> 
                     일비: 
-                    <b style="color:#007bff; display:inline-block; width:50px; text-align:right;">${Number(item.allowance || 0).toLocaleString()}</b>원
+                    <b style="color:#2563eb; display:inline-block; width:50px; text-align:right;">${Number(item.allowance || 0).toLocaleString()}</b>원
                 </span>
              </li>`;
                 totalOvertime += (item.overtime || 0);
@@ -1715,18 +1932,47 @@
             });
 
             if (!hasData) { 
-                listHtml += `<li style="color:#666; padding:10px; font-size: 0.8rem; text-align:center;">이번 달 [${currentUser}]님의 정산 내역이 없습니다.</li>`; 
+                listHtml += `<li style="color:#64748b; padding:10px; font-size: 0.8rem; text-align:center;">이번 달 [${currentUser}]님의 정산 내역이 없습니다.</li>`; 
             }
 
-            let html = `<h3 style="margin-bottom: 10px; border-bottom: 2px solid #28a745; padding-bottom: 8px; font-size: 1.1rem; color: #155724;">💰 ${currentMonth + 1}월 [${currentUser}] 정산 요약</h3>`;
-            html += `<div style="background:#e8f0fe; padding:12px; border-radius:6px; margin:10px 0; border:1px solid #c6dafc; display:flex; justify-content:center;">`;
-            html += `<table style="font-size:0.95rem; font-weight:bold; color:#333; border-spacing:0;">`;
-            html += `<tr><td style="text-align:right; padding-right:15px; padding-bottom:5px;">총합계 보상 :</td><td style="text-align:right; color:#007bff; font-size:1.15rem; padding-right:5px; padding-bottom:5px;">${Number(totalOvertime || 0).toFixed(2)}</td><td style="text-align:left; padding-bottom:5px;">T</td></tr>`;
-            html += `<tr><td style="text-align:right; padding-right:15px;">총합계 일비 :</td><td style="text-align:right; color:#007bff; font-size:1.15rem; padding-right:5px;">${Number(totalAllowance || 0).toLocaleString()}</td><td style="text-align:left;">원</td></tr>`;
+            let html = `<h3 style="margin-bottom: 10px; border-bottom: 2px solid #10b981; padding-bottom: 8px; font-size: 1.05rem; color: #047857;">💰 ${currentMonth + 1}월 [${currentUser}] 정산 요약</h3>`;
+            html += `<div style="background:#eff6ff; padding:12px; border-radius:8px; margin:10px 0; border:1px solid #bfdbfe; display:flex; justify-content:center;">`;
+            html += `<table style="font-size:0.92rem; font-weight:800; color:#1e293b; border-spacing:0;">`;
+            html += `<tr><td style="text-align:right; padding-right:12px; padding-bottom:4px;">총합계 보상 :</td><td style="text-align:right; color:#2563eb; font-size:1.1rem; padding-right:4px; padding-bottom:4px;">${Number(totalOvertime || 0).toFixed(2)}</td><td style="text-align:left; padding-bottom:4px;">T</td></tr>`;
+            html += `<tr><td style="text-align:right; padding-right:12px;">총합계 일비 :</td><td style="text-align:right; color:#2563eb; font-size:1.1rem; padding-right:4px;">${Number(totalAllowance || 0).toLocaleString()}</td><td style="text-align:left;">원</td></tr>`;
             html += `</table></div>`;
             html += `<ul class="result-list" style="padding:0; margin-top:0; max-height: 220px; overflow-y: auto;">${listHtml}</ul>`;
 
             container.innerHTML = html;
+        }
+
+        function updateVehicleFormBadges(date) {
+            const allVehicles = ['1호차', '2호차', '3호차', '예비버스', '11호차', '12호차', '13호차', '14호차', '3818'];
+            allVehicles.forEach(v => {
+                const pill = document.getElementById(`status_pill_${v}`);
+                const itemBox = document.getElementById(`item_${v}`);
+                if (!pill || !itemBox) return;
+
+                const res = allReservations.find(r => r.vehicle === v && (r.dates || []).includes(date));
+                if (res) {
+                    const shortT = getShortType(res.type);
+                    const drvNames = (res.assigned || []).map(n => getDispName(n)).join(',');
+                    pill.style.display = 'inline-block';
+                    if (res.isCanceled) {
+                        pill.className = 'veh-status-pill canceled';
+                        pill.innerText = `취소됨 (${shortT})`;
+                        itemBox.classList.remove('active-res');
+                    } else {
+                        pill.className = 'veh-status-pill';
+                        pill.innerText = `${shortT}${drvNames ? ' · ' + drvNames : ''}`;
+                        itemBox.classList.add('active-res');
+                    }
+                } else {
+                    pill.style.display = 'none';
+                    pill.innerText = '';
+                    itemBox.classList.remove('active-res');
+                }
+            });
         }
 
         function renderDispatchResult(date) {
@@ -1734,40 +1980,43 @@
             const activeReservations = allReservations.filter(r => (r.dates || []).includes(date));
             let html = '';
 
+            updateVehicleFormBadges(date);
+
+            // 하단 상세 결과창에서도 메모 배지를 빨간색으로 통일
             if (dailyMemos[date]) {
                 html += `
-                <li style="background-color: #fff3cd; border: 2px solid #ffeeba; margin-bottom: 12px; border-radius: 6px; padding: 15px; cursor: pointer; display: flex; flex-direction: column; gap: 8px;" onclick="handleMemo()">
-                    <div><span style="background: #ffc107; color: #000; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 900;">📌 공지 및 메모</span></div>
-                    <div style="color: #004085; font-weight: 700; font-size: 1.05rem; line-height: 1.5; white-space: pre-wrap;">${dailyMemos[date]}</div>
+                <li style="background-color: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; margin-bottom: 10px; border-radius: 8px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;" onclick="handleMemo()">
+                    <div><span class="badge" style="background-color: #dc2626; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 800;">📌 메모</span></div>
+                    <div style="color: #991b1b; font-weight: 700; font-size: 0.98rem; line-height: 1.5; white-space: pre-wrap;">${dailyMemos[date]}</div>
                 </li>`;
             }
 
             if (activeReservations.length === 0) {
-                html += `<li style="color:#666; border:none; background:transparent; padding:0 0 10px 0;">${date} 등록된 예약 내역이 없습니다.</li>`;
+                html += `<li style="color:#64748b; border:none; background:transparent; padding:0 0 10px 0;">${date} 등록된 예약 내역이 없습니다.</li>`;
             } else {
                 activeReservations.forEach(d => {
                     let shortTypeStr = getShortType(d.type);
                     let badgeClass = 'default';
+                    let borderColor = '#64748b';
 
-                    if (shortTypeStr === '공공') badgeClass = 'pub';
-                    else if (shortTypeStr === '성묘') badgeClass = 'grave';
-                    else if (shortTypeStr === '1박') badgeClass = 'night1';
-                    else if (shortTypeStr === '2박') badgeClass = 'night2';
-                    else if (shortTypeStr === '서울') badgeClass = 'seoul';
-                    else if (shortTypeStr === '시티' || shortTypeStr === '시티(야)') badgeClass = 'citytour';
-                    else if (shortTypeStr === '기타') badgeClass = 'default';
+                    if (shortTypeStr === '공공') { badgeClass = 'pub'; borderColor = '#2563eb'; }
+                    else if (shortTypeStr === '성묘') { badgeClass = 'grave'; borderColor = '#16a34a'; }
+                    else if (shortTypeStr === '1박') { badgeClass = 'night1'; borderColor = '#f59e0b'; }
+                    else if (shortTypeStr === '2박') { badgeClass = 'night2'; borderColor = '#ea580c'; }
+                    else if (shortTypeStr === '서울') { badgeClass = 'seoul'; borderColor = '#0891b2'; }
+                    else if (shortTypeStr === '시티' || shortTypeStr === '시티(야)') { badgeClass = 'citytour'; borderColor = '#9333ea'; }
 
-                    if (d.isManual) badgeClass = 'manual-badge';
+                    // 수동배차여도 원래 운행 형태의 기본 배지 색상 그대로 유지
 
-                    let canceledLiStyle = d.isCanceled ? 'color: #adb5bd; text-decoration: line-through;' : '';
-                    let canceledBadgeStyle = d.isCanceled ? 'background-color: transparent; color: #adb5bd; border: 1px solid #adb5bd;' : '';
+                    let canceledLiStyle = d.isCanceled ? 'color: #94a3b8; text-decoration: line-through; border-left-color: #cbd5e1;' : `border-left-color: ${borderColor};`;
+                    let canceledBadgeStyle = d.isCanceled ? 'background-color: transparent; color: #94a3b8; border: 1px solid #cbd5e1;' : '';
                     
                     let isMyDispatch = (d.assigned || []).includes(currentUser);
                     let assignedNamesHTML = (d.assigned || []).map(name => {
                         let isUnderline = (d.settlement && d.settlement[name] && d.settlement[name][date] && d.settlement[name][date].isEarly) || false;
                         let dispName = name;
                         if (name === currentUser && !d.isCanceled) {
-                            dispName = `<span style="color:#0056b3; font-weight:900;">${dispName}</span>`;
+                            dispName = `<span class="my-name-hl">${dispName}</span>`;
                         }
                         return (isUnderline && !d.isCanceled && name !== '미지정') ? `<span class="early-underline">${dispName}</span>` : dispName;
                     }).join(', ');
@@ -1777,23 +2026,26 @@
                     let reportText = '';
                     const mySettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][date]) ? d.settlement[currentUser][date] : null;
                     if (mySettle) {
-                        reportText = `<div style="margin-top:8px; font-size:0.85rem; color:#155724; background:#d4edda; padding:6px 10px; border-radius:4px; border: 1px solid #c3e6cb;">
+                        reportText = `<div style="margin-top:8px; font-size:0.82rem; color:#15803d; background:#dcfce7; padding:6px 10px; border-radius:6px; border: 1px solid #86efac;">
                             <b>[${currentUser} 정산]</b> ${mySettle.isEarly ? '[선운행] ' : ''}근무: ${mySettle.clockIn || '-'} ~ ${mySettle.clockOut || '-'} | 보상: <b>${Number(mySettle.overtime || 0).toFixed(2)}</b>시간 | 일비: <b>${Number(mySettle.allowance || 0).toLocaleString()}</b>원
                         </div>`;
                     }
 
                     let attachIcon = d.photoUrl ? ' <span style="font-size:0.9rem;">📎</span>' : '';
-                    let highlightStyle = (isMyDispatch && !d.isCanceled) ? 'border: 2px solid #007bff; background-color: #f0f7ff;' : '';
+                    let highlightStyle = (isMyDispatch && !d.isCanceled) ? 'border: 2px solid #2563eb; border-left: 5px solid #2563eb; background-color: #eff6ff;' : '';
 
                     html += `
                         <li style="${canceledLiStyle} ${highlightStyle} cursor: pointer;" onclick="showDispatchDetail(event, '${d.id}', '${date}')">
-                            <b>[${d.vehicle}]</b>${attachIcon} 
-                            <span class="badge ${badgeClass}" style="${canceledBadgeStyle}">${shortTypeStr}</span> 
-                            <span class="badge default" style="margin-right:0; ${canceledBadgeStyle}">${d.km}km</span>
-                            ${d.isCanceled ? '<span style="color:#d9534f; font-weight:bold; margin-left:5px; text-decoration:none;">[취소됨]</span>' : ''}<br>
-                            <span style="color: #007bff; font-weight: bold; font-size: 0.95rem; margin: 4px 0; display: inline-block;">[${d.start || '미입력'} ➔ ${d.end || '미입력'}]</span><br>
-                            내용: ${d.dest || ''} <br>
-                            운전원: <b style="${d.isCanceled ? 'color:#adb5bd;' : 'color:#28a745;'}">${assignedNamesHTML}</b>
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                                <div>
+                                    <b style="font-size:1rem; color:#0f172a;">[${d.vehicle}]</b>${attachIcon} 
+                                    <span class="badge ${badgeClass}" style="${canceledBadgeStyle}">${shortTypeStr}</span> 
+                                    <span class="badge default" style="margin-right:0; ${canceledBadgeStyle}">${d.km}km</span>
+                                    ${d.isCanceled ? '<span style="color:#e11d48; font-weight:800; margin-left:4px; text-decoration:none;">[취소됨]</span>' : ''}
+                                </div>
+                                <div>운전원: <b style="${d.isCanceled ? 'color:#94a3b8;' : 'color:#15803d;'}">${assignedNamesHTML}</b></div>
+                            </div>
+                            <div style="color: #1d4ed8; font-weight: 800; font-size: 0.94rem; margin-top: 4px;">[${d.start || '미입력'} ➔ ${d.end || '미입력'}] ${d.dest ? `<span style="color:#475569; font-weight:600; font-size:0.88rem;">(${d.dest})</span>` : ''}</div>
                             ${reportText}
                         </li>`;
                 });
@@ -1804,13 +2056,13 @@
             const dutyDrivers = getDutyDriversForDate(date);
 
             if (dutyDrivers.length > 0 || offDrivers.length > 0) {
-                html += `<li style="background-color: #fff; border: 2px dashed #007bff; margin-top: 10px; border-radius: 6px;">`;
+                html += `<li style="background-color: #fff; border: 1.5px dashed #93c5fd; border-left: 4px solid #3b82f6; margin-top: 10px; border-radius: 8px;">`;
                 if (dutyDrivers.length > 0) {
-                    html += `<div style="margin-bottom: ${offDrivers.length > 0 ? '8px' : '0'};"><span style="color:#f29900; font-weight:700;">당직: ${dutyDrivers.join(', ')}</span></div>`;
+                    html += `<div style="margin-bottom: ${offDrivers.length > 0 ? '6px' : '0'};"><span style="color:#d97706; font-weight:800;">당직: ${dutyDrivers.join(', ')}</span></div>`;
                 }
                 if (offDrivers.length > 0) {
                     let offNames = offDrivers.map(n => getDispName(n)).join(', ');
-                    html += `<div><span style="color:#d9534f; font-weight:bold;">휴무: </span><span style="color:#007bff; font-weight:bold;">${offNames}</span></div>`;
+                    html += `<div><span style="color:#e11d48; font-weight:800;">휴무: </span><span style="color:#2563eb; font-weight:800;">${offNames}</span></div>`;
                 }
                 html += `</li>`;
             }
@@ -1826,10 +2078,10 @@
                     files.forEach((f, idx) => {
                         attachHtml += `
                             <li style="margin-bottom: 5px; display: flex; gap: 5px; align-items: center;">
-                                <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #0056b3; background: #f0f7ff; border: 1px solid #b8daff; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
+                                <a href="${f.url}" target="_blank" style="flex: 1; display: block; text-decoration: none; color: #1d4ed8; background: #fff; border: 1px solid #bfdbfe; padding: 6px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                                     📎 ${f.name}
                                 </a>
-                                <button onclick="deleteDailyFile('${date}', ${idx})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">삭제</button>
+                                <button onclick="deleteDailyFile('${date}', ${idx})" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 0.78rem; flex-shrink:0;">삭제</button>
                             </li>`;
                         optionsHtml += `<option value="${f.url}">${f.name}</option>`;
                     });
@@ -1855,11 +2107,16 @@
             currentDrivers.forEach(driver => {
                 const rawStatus = getDriverStatus(date, driver);
                 const isDuty = dutyDrivers.includes(driver);
-                const displayStatus = (rawStatus === '휴무') ? '휴무' : (isDuty ? '당직' : '출근');
+                const isOff = (rawStatus === '휴무');
+                const displayStatus = isOff ? '휴무' : (isDuty ? '당직' : '출근');
+
+                let itemStyle = '';
+                if (isDuty) itemStyle = 'border-color:#f59e0b; background:#fffbeb;';
+                else if (isOff) itemStyle = 'border-color:#fecdd3; background:#fff1f2;';
 
                 container.innerHTML += `
-                    <div class="status-item" style="${isDuty ? 'border-color:#f29900; background:#fffdf5;' : ''}">
-                        <strong>${driver}</strong>
+                    <div class="status-item" style="${itemStyle}">
+                        <strong style="font-size:0.9rem; color:#0f172a;">${driver}</strong>
                         <div class="radio-group">
                             <label><input type="radio" name="st_${driver}" value="출근" ${displayStatus === '출근' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '출근', '${displayStatus}')">출근</label>
                             <label><input type="radio" name="st_${driver}" value="당직" ${displayStatus === '당직' ? 'checked' : ''} onchange="handleStatusChange('${driver}', '당직', '${displayStatus}')">당직</label>
@@ -1904,7 +2161,7 @@
             } else {
                 document.getElementById('login-container').style.display = 'none';
                 document.getElementById('app-container').style.display = 'block';
-                document.getElementById('welcome-msg').innerText = `${getDispName(currentUser)}님 통합관리`;
+                document.getElementById('welcome-msg').innerText = `${getDispName(currentUser)}님`;
                 return true;
             }
         }
@@ -1928,7 +2185,6 @@
             }
         };
 
-        // ✅ 원래의 심플한 모달 뒤로가기 닫기 코드로 원복 (로그아웃 팝업 없음)
         (function() {
             const pushModalState = () => history.pushState({ isModal: true }, '', '');
             const popModalState = () => { if (history.state && history.state.isModal) history.back(); };
@@ -1959,7 +2215,6 @@
             });
         })();
 
-        // 한글 가로줄 전용(PSM 6) OCR 워커 캐시
         let _ocrWorkerPromise = null;
         async function getKorOcrWorker() {
             if (!_ocrWorkerPromise) {
@@ -1975,7 +2230,6 @@
             return _ocrWorkerPromise;
         }
 
-        // 신청서 이미지에서 출발지, 목적지, 단체명(성묘/시티는 공란) 자동 추출
         async function extractRouteFromImage(file) {
             if (!file || !file.type.startsWith('image/') || typeof Tesseract === 'undefined') {
                 return { start: '', end: '', org: '' };
@@ -2390,13 +2644,13 @@
             if (isMobileView) {
                 viewport.setAttribute('content', 'width=1050, user-scalable=yes');
                 btn.innerText = '📱폰화면';
-                btn.style.background = '#ffc107';
-                btn.style.color = '#000';
+                btn.style.background = '#facc15';
+                btn.style.color = '#0f172a';
                 isMobileView = false;
             } else {
                 viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes');
                 btn.innerText = 'PC버전';
-                btn.style.background = '#17a2b8';
+                btn.style.background = '#0ea5e9';
                 btn.style.color = '#fff';
                 isMobileView = true;
             }
