@@ -410,9 +410,12 @@
                 </div>
                 <div id="settlement-container" style="background:#f0fdf4; border:1.5px solid #16a34a; border-radius:8px; padding:14px; margin-bottom:15px;">
                     <h5 id="settle-user-title" style="margin-bottom:10px; color:#15803d; font-size:1rem; font-weight:800;">운행 시간 입력</h5>
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                        <label style="font-weight:800; cursor:pointer; color:#e11d48; font-size:0.9rem;">
-                            <input type="checkbox" id="settle-early" style="transform:scale(1.15); margin-right:5px;"> 선운행 (달력에 빨간 밑줄 표시)
+                    <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px; flex-wrap:wrap;">
+                        <label style="font-weight:800; cursor:pointer; color:#e11d48; font-size:0.9rem; display:flex; align-items:center;">
+                            <input type="checkbox" id="settle-early" style="transform:scale(1.15); margin-right:5px;"> 선운행 (빨간 밑줄)
+                        </label>
+                        <label style="font-weight:800; cursor:pointer; color:#2563eb; font-size:0.9rem; display:flex; align-items:center;">
+                            <input type="checkbox" id="settle-flex" style="transform:scale(1.15); margin-right:5px;"> 시차 출퇴근 (출근시간부터 기본근무)
                         </label>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom:5px;">
@@ -1724,6 +1727,7 @@
 
             const mySettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][clickedDate]) ? d.settlement[currentUser][clickedDate] : {};
             document.getElementById('settle-early').checked = mySettle.isEarly || false;
+            document.getElementById('settle-flex').checked = mySettle.isFlex || false;
             document.getElementById('settle-in').value = mySettle.clockIn || '';
             document.getElementById('settle-out').value = mySettle.clockOut || '';
 
@@ -1760,7 +1764,7 @@
             document.getElementById('detail-modal-overlay').style.display = 'none';
         }
 
-        function calculateSettlement(dateStr, clockInStr, clockOutStr, type) {
+        function calculateSettlement(dateStr, clockInStr, clockOutStr, type, isFlex = false) {
             if (!clockInStr || !clockOutStr) return { overtime: 0, allowance: 0 };
             let inT = parseFloat(clockInStr);
             let outT = parseFloat(clockOutStr);
@@ -1776,7 +1780,8 @@
             let inside = 0;
             let outside = 0;
 
-            if (type && (type.includes('시티투어(야)') || type.includes('시티(야)'))) {
+            // 🚀 시차 출퇴근(isFlex) 체크 시 또는 시티투어(야)일 때: 출근시간부터 9시간(8시간 근무 + 1시간 휴게)을 기본 근무로 계산
+            if (isFlex || (type && (type.includes('시티투어(야)') || type.includes('시티(야)')))) {
                 let baseEnd = inT + 9;
                 let rawInside = Math.max(0, Math.min(outT, baseEnd) - inT);
                 inside = rawInside >= 5 ? rawInside - 1 : rawInside;
@@ -1812,6 +1817,7 @@
             const resId = document.getElementById('settle-res-id').value;
             const clickedDate = document.getElementById('settle-date').value;
             const isEarly = document.getElementById('settle-early').checked;
+            const isFlex = document.getElementById('settle-flex').checked;
             const clockIn = document.getElementById('settle-in').value;
             const clockOut = document.getElementById('settle-out').value;
 
@@ -1820,13 +1826,14 @@
             if (!d) return;
 
             showLoading('계산 및 저장 중...');
-            const calc = calculateSettlement(clickedDate, clockIn, clockOut, d.type);
+            const calc = calculateSettlement(clickedDate, clockIn, clockOut, d.type, isFlex);
             
             if (!d.settlement) d.settlement = {};
             if (!d.settlement[currentUser]) d.settlement[currentUser] = {};
             
             d.settlement[currentUser][clickedDate] = {
                 isEarly: isEarly,
+                isFlex: isFlex,
                 clockIn: clockIn,
                 clockOut: clockOut,
                 overtime: calc.overtime,
@@ -1835,7 +1842,7 @@
 
             db.collection('reservations').doc(resId).set({ settlement: d.settlement }, { merge: true })
             .then(() => {
-                alert(`[${currentUser}] 정산 입력 완료!\n보상: ${calc.overtime.toFixed(2)}시간 | 일비: ${calc.allowance.toLocaleString()}원`);
+                alert(`[${currentUser}] 정산 입력 완료!${isFlex ? ' (시차 출퇴근 적용)' : ''}\n보상: ${calc.overtime.toFixed(2)}시간 | 일비: ${calc.allowance.toLocaleString()}원`);
                 renderDispatchResult(currentDate); 
                 updateCalendarCellUI(currentDate); 
                 renderMonthlySummary(); 
@@ -2027,10 +2034,10 @@
                     const mySettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][date]) ? d.settlement[currentUser][date] : null;
                     if (mySettle) {
                         reportText = `<div style="margin-top:8px; font-size:0.82rem; color:#15803d; background:#dcfce7; padding:6px 10px; border-radius:6px; border: 1px solid #86efac;">
-                            <b>[${currentUser} 정산]</b> ${mySettle.isEarly ? '[선운행] ' : ''}근무: ${mySettle.clockIn || '-'} ~ ${mySettle.clockOut || '-'} | 보상: <b>${Number(mySettle.overtime || 0).toFixed(2)}</b>시간 | 일비: <b>${Number(mySettle.allowance || 0).toLocaleString()}</b>원
+                            <b>[${currentUser} 정산]</b> ${mySettle.isEarly ? '[선운행] ' : ''}${mySettle.isFlex ? '<span style="color:#2563eb; font-weight:800;">[시차]</span> ' : ''}근무: ${mySettle.clockIn || '-'} ~ ${mySettle.clockOut || '-'} | 보상: <b>${Number(mySettle.overtime || 0).toFixed(2)}</b>시간 | 일비: <b>${Number(mySettle.allowance || 0).toLocaleString()}</b>원
                         </div>`;
                     }
-
+                    
                     let attachIcon = d.photoUrl ? ' <span style="font-size:0.9rem;">📎</span>' : '';
                     let highlightStyle = (isMyDispatch && !d.isCanceled) ? 'border: 2px solid #2563eb; border-left: 5px solid #2563eb; background-color: #eff6ff;' : '';
 
