@@ -21,6 +21,7 @@
         .nav-pill-btn { border: none; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 0.82rem; line-height: 1.2; cursor: pointer; white-space: nowrap; transition: 0.15s; font-family: inherit; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
         .nav-pill-btn.audit { background: #0f172a; color: #facc15; border: 1px solid #334155; display: none; }
         .nav-pill-btn.maint { background: #10b981; color: #fff; }
+        .nav-pill-btn.pcview { background: #0ea5e9; color: #fff; }
         .nav-pill-btn.dispatch { background: #2563eb; color: #fff; }
         .nav-pill-btn:hover { filter: brightness(0.93); }
 
@@ -94,9 +95,9 @@
 
         @media (max-width: 768px) {
             .top-navbar { padding: 8px 10px; margin-top: 4px; }
-            .top-title { font-size: 0.95rem; }
-            .top-user { font-size: 0.74rem; padding: 3px 8px; }
-            .nav-pill-btn { padding: 5px 10px; font-size: 0.76rem; }
+            .top-title { font-size: 0.92rem; }
+            .top-user { font-size: 0.72rem; padding: 3px 7px; }
+            .nav-pill-btn { padding: 5px 8px; font-size: 0.74rem; }
             .container { padding: 0 8px; margin: 6px auto 20px; gap: 12px; }
             .card { padding: 12px; border-radius: 12px; }
             .period-control-bar { flex-direction: column; align-items: stretch; }
@@ -151,7 +152,8 @@
             <button id="btn-admin3-audit" class="nav-pill-btn audit" onclick="openAuditModal()">🕵️ 기록</button>
         </div>
         <div class="top-nav-btns">
-            <button class="nav-pill-btn maint" onclick="location.href='maintenance.html'">🔧 정비창</button>
+            <button class="nav-pill-btn maint" onclick="location.href='maintenance.html'">🔧 정비</button>
+            <button id="btn-toggle-view" class="nav-pill-btn pcview" onclick="toggleViewMode()">PC버전</button>
             <button class="nav-pill-btn dispatch" onclick="location.href='index.html'">📅 배차판</button>
         </div>
     </div>
@@ -374,6 +376,11 @@
         let currentUser = localStorage.getItem('loggedInUser') || '';
         let cachedAuditLogs = [];
 
+        // 🚀 [핵심 수정] 누락되었던 데이터 조회 범위 변수 선언 복원
+        let loadedStartStr = '';
+        let loadedEndStr = '';
+        let baseDataLoaded = false;
+
         function getHolidayName(year, month, day) {
             const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dateStr = `${year}-${mmdd}`;
@@ -417,33 +424,6 @@
         function getDriverStatus(date, driver) {
             if (!dailyDriverStatus[date]) return '출근';
             return dailyDriverStatus[date][driver] || '출근';
-        }
-
-        function getDeviceLabel() {
-            const ua = navigator.userAgent || '';
-            if (/Android/i.test(ua)) return '📱안드로이드';
-            if (/iPhone|iPad|iPod/i.test(ua)) return '📱아이폰';
-            if (/Windows/i.test(ua)) return '💻PC(윈도우)';
-            if (/Macintosh|Mac OS/i.test(ua)) return '💻PC(맥)';
-            return '🌐기타기기';
-        }
-
-        async function logActivity(action, detail) {
-            const actor = currentUser || localStorage.getItem('loggedInUser') || '미상';
-            const now = new Date();
-            const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            try {
-                await db.collection('activity_logs').add({
-                    user: actor,
-                    action: action,
-                    detail: detail,
-                    device: getDeviceLabel(),
-                    timeStr: timeStr,
-                    timestamp: Date.now()
-                });
-            } catch (e) {
-                console.warn('로그 기록 실패:', e);
-            }
         }
 
         function openAuditModal() {
@@ -772,10 +752,12 @@
         }
 
         async function loadFromFirebase() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-            ensureRangeForCurrentView();
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'flex';
 
             try {
+                ensureRangeForCurrentView();
+
                 const promises = [
                     db.collection('reservations')
                       .where("startDate", ">=", loadedStartStr)
@@ -822,8 +804,9 @@
                 recalculateAll();
             } catch (err) {
                 console.error("집계 데이터 로드 오류:", err);
+                renderStats();
             } finally {
-                document.getElementById('loading-overlay').style.display = 'none';
+                if (overlay) overlay.style.display = 'none';
             }
         }
 
@@ -1401,15 +1384,19 @@
             const btn = document.getElementById('btn-toggle-view');
             if (isMobileView) {
                 viewport.setAttribute('content', 'width=1100, user-scalable=yes');
-                btn.innerText = '📱폰화면';
-                btn.style.background = '#facc15';
-                btn.style.color = '#0f172a';
+                if (btn) {
+                    btn.innerText = '📱폰화면';
+                    btn.style.background = '#facc15';
+                    btn.style.color = '#0f172a';
+                }
                 isMobileView = false;
             } else {
                 viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes');
-                btn.innerText = 'PC버전';
-                btn.style.background = '#2563eb';
-                btn.style.color = '#fff';
+                if (btn) {
+                    btn.innerText = 'PC버전';
+                    btn.style.background = '#0ea5e9';
+                    btn.style.color = '#fff';
+                }
                 isMobileView = true;
             }
         }
@@ -1428,11 +1415,19 @@
 
         window.onload = () => {
             checkAuth();
+            // 인터넷 지연 시에도 로딩창이 3.5초 뒤에는 무조건 해제되도록 안전장치 추가
+            setTimeout(() => {
+                const overlay = document.getElementById('loading-overlay');
+                if (overlay && overlay.style.display !== 'none') overlay.style.display = 'none';
+            }, 3500);
+
             const savedDate = sessionStorage.getItem('lastSelectedDate');
             if (savedDate) {
                 const parts = savedDate.split('-');
-                currentYear = parseInt(parts[0]);
-                currentMonth = parseInt(parts[1]) - 1;
+                if (parts.length >= 2) {
+                    currentYear = parseInt(parts[0], 10);
+                    currentMonth = parseInt(parts[1], 10) - 1;
+                }
             }
             loadFromFirebase();
         };
