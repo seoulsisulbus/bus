@@ -339,7 +339,7 @@
         /* admin3 전용 활동기록 테이블 스타일 */
         .audit-filter-bar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
         .audit-filter-bar select { flex: 1; min-width: 110px; padding: 7px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.84rem; font-weight: 700; font-family: inherit; }
-        .audit-log-list { list-style: none; max-height: 55vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; divide-y: 1px solid #e2e8f0; }
+        .audit-log-list { list-style: none; max-height: 55vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
         .audit-log-item { padding: 9px 11px; border-bottom: 1px solid #f1f5f9; font-size: 0.83rem; line-height: 1.45; display: flex; flex-direction: column; gap: 3px; }
         .audit-log-item:nth-child(even) { background: #f8fafc; }
         .audit-log-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -927,7 +927,6 @@
             localStorage.setItem('userRole', 'admin');
             localStorage.setItem('loggedInPw', realPw); 
 
-            // 로그인 활동 기록 저장 후 새로고침
             await logActivity('로그인', '배차관리 시스템 로그인 접속', id);
             window.location.reload(); 
         }
@@ -1146,9 +1145,10 @@
             showLoading('데이터 최적화 로딩 중...');
             
             if (!loadedStartStr || !loadedEndStr) {
-                const startDate = new Date(currentYear, currentMonth - 1, 1);
+                // 🚀 전월 말에 출발해 월초(1~2일)에 걸쳐 있는 1박·2박이 누락되지 않도록 전전월 말일(7일 여유)부터 로드
+                const startDate = new Date(currentYear, currentMonth - 1, -6);
                 const endDate = new Date(currentYear, currentMonth + 2, 0); 
-                loadedStartStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+                loadedStartStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
                 loadedEndStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
             }
 
@@ -1534,15 +1534,12 @@
             logActivity('상태변경', `[${currentDate}] ${driver} 상태 변경: ${oldStatus} ➔ ${newStatus}`);
         }
 
+        // 🚀 [방법 1 핵심 적용]
+        // 1) shouldSaveToDB === false (웹 접속 및 달력 조회 시): 순번을 0번부터 새로 굴리지 않고 DB에 저장된 확정 배차(assigned)를 그대로 유지하여 표시
+        // 2) shouldSaveToDB === true (예약 등록/취소/휴무 변경 시): 현재 선택된 날짜(currentDate) 이전의 과거 배차는 기존 DB 배정을 그대로 보존하고 다음 순번(pointer)만 이어받아 계산
         function recalculateAll(shouldSaveToDB = true) {
             const originalStateString = JSON.stringify(allReservations);
-            allReservations.forEach(r => {
-                if (r.isCanceled && (!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
-                    r.canceledDrivers = [...r.assigned];
-                }
-                r.assigned = [];
-            });
-            
+
             allReservations.sort((a, b) => {
                 if (a.startDate !== b.startDate) return new Date(a.startDate) - new Date(b.startDate);
                 
@@ -1598,7 +1595,32 @@
                 }
             });
 
-            let pointer = 0; let lastProcessedDate = null; let currentList = [...defaultDrivers];
+            if (!shouldSaveToDB) {
+                // 방법 1: 단순 접속/조회 시에는 DB에 저장된 배정 명단(assigned)을 초기화하지 않고 그대로 유지
+                allReservations.forEach(r => {
+                    if (r.isCanceled) {
+                        if ((!r.canceledDrivers || r.canceledDrivers.length === 0) && r.assigned && r.assigned.length > 0) {
+                            r.canceledDrivers = [...r.assigned];
+                        } else if ((!r.assigned || r.assigned.length === 0) && r.canceledDrivers && r.canceledDrivers.length > 0) {
+                            r.assigned = [...r.canceledDrivers];
+                        }
+                    }
+                    if (!r.assigned) r.assigned = [];
+                });
+
+                calculateAutoDuty();
+                renderCalendar();
+                renderStatusPanel(currentDate);
+                renderDispatchResult(currentDate);
+                renderMonthlySummary();
+                return;
+            }
+
+            // shouldSaveToDB === true 인 경우: currentDate 이전의 확정된 과거 배차는 그대로 유지하고 pointer만 이어받음
+            const lockBeforeDate = currentDate || '';
+            let pointer = 0;
+            let lastProcessedDate = null;
+            let currentList = [...defaultDrivers];
 
             allReservations.forEach(res => {
                 if (res.startDate !== lastProcessedDate) {
@@ -1606,6 +1628,36 @@
                     currentList = getEffectiveDriverList(res.startDate);
                     if (currentList.length > 0) pointer = pointer % currentList.length; 
                 }
+
+                const existingAssigned = (res.assigned && res.assigned.length > 0)
+                    ? [...res.assigned]
+                    : ((res.isCanceled && res.canceledDrivers && res.canceledDrivers.length > 0) ? [...res.canceledDrivers] : []);
+
+                // 작업 중인 날짜(currentDate) 이전의 과거 배차는 기존 배정을 그대로 보존하고 순번 포인터만 갱신
+                if (lockBeforeDate && res.startDate < lockBeforeDate && existingAssigned.length > 0) {
+                    res.assigned = existingAssigned;
+                    if (res.isCanceled && (!res.canceledDrivers || res.canceledDrivers.length === 0)) {
+                        res.canceledDrivers = [...existingAssigned];
+                    }
+                    if (!res.isManual && currentList.length > 0) {
+                        for (let i = existingAssigned.length - 1; i >= 0; i--) {
+                            const idx = currentList.indexOf(existingAssigned[i]);
+                            if (idx !== -1) {
+                                pointer = (idx + 1) % currentList.length;
+                                break;
+                            }
+                        }
+                    }
+                    if (res.nextPointerDriver && currentList.includes(res.nextPointerDriver)) {
+                        pointer = currentList.indexOf(res.nextPointerDriver);
+                    }
+                    return;
+                }
+
+                if (res.isCanceled && (!res.canceledDrivers || res.canceledDrivers.length === 0) && res.assigned && res.assigned.length > 0) {
+                    res.canceledDrivers = [...res.assigned];
+                }
+                res.assigned = [];
 
                 if (res.isManual && res.manualDrivers && res.manualDrivers.length > 0) {
                     res.assigned = [...res.manualDrivers];
@@ -1627,7 +1679,7 @@
 
                         let isOverlapping = false;
                         for (let other of allReservations) {
-                            if (other.id !== res.id && other.assigned.includes(candidate)) {
+                            if (other.id !== res.id && other.assigned && other.assigned.includes(candidate)) {
                                 if (res.dates.some(d => other.dates.includes(d))) { isOverlapping = true; break; }
                             }
                         }
@@ -1645,17 +1697,15 @@
 
             calculateAutoDuty();
 
-            if (shouldSaveToDB) {
-                const oldReservations = JSON.parse(originalStateString);
-                allReservations.forEach(res => {
-                    const oldRes = oldReservations.find(o => o.id === res.id);
-                    const oldAssigned = JSON.stringify((oldRes && oldRes.assigned) || []);
-                    const newAssigned = JSON.stringify(res.assigned || []);
-                    if (!oldRes || oldAssigned !== newAssigned || oldRes.isCanceled !== res.isCanceled) {
-                        db.collection('reservations').doc(res.id).set(res).catch(e=>{});
-                    }
-                });
-            }
+            const oldReservations = JSON.parse(originalStateString);
+            allReservations.forEach(res => {
+                const oldRes = oldReservations.find(o => o.id === res.id);
+                const oldAssigned = JSON.stringify((oldRes && oldRes.assigned) || []);
+                const newAssigned = JSON.stringify(res.assigned || []);
+                if (!oldRes || oldAssigned !== newAssigned || oldRes.isCanceled !== res.isCanceled) {
+                    db.collection('reservations').doc(res.id).set(res).catch(e=>{});
+                }
+            });
 
             renderCalendar();
             renderStatusPanel(currentDate);
@@ -1793,7 +1843,8 @@
             if (currentMonth < 0) { currentMonth = 11; currentYear--; }
             else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
 
-            const viewStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+            const prevBufferDate = new Date(currentYear, currentMonth, -6);
+            const viewStart = `${prevBufferDate.getFullYear()}-${String(prevBufferDate.getMonth() + 1).padStart(2, '0')}-${String(prevBufferDate.getDate()).padStart(2, '0')}`;
             const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
             const viewEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
@@ -1999,7 +2050,6 @@
             let inside = 0;
             let outside = 0;
 
-            // 시차 출퇴근(isFlex) 체크 시 또는 시티투어(야)일 때: 출근시간부터 9시간(8시간 근무 + 1시간 휴게)을 기본 근무로 계산
             if (isFlex || (type && (type.includes('시티투어(야)') || type.includes('시티(야)')))) {
                 let baseEnd = inT + 9;
                 let rawInside = Math.max(0, Math.min(outT, baseEnd) - inT);
@@ -2389,7 +2439,6 @@
                 document.getElementById('app-container').style.display = 'block';
                 document.getElementById('welcome-msg').innerText = `${getDispName(currentUser)}님`;
                 
-                // 🕵️ 오직 admin3 로그인 시에만 [🕵️ 기록] 버튼 노출
                 const auditBtn = document.getElementById('btn-admin3-audit');
                 if (auditBtn) {
                     auditBtn.style.display = (currentUser === 'admin3') ? 'inline-block' : 'none';
