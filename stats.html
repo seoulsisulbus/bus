@@ -13,7 +13,7 @@
         input, textarea, select { user-select: text; -webkit-user-select: text; }
 
         /* 상단 통합 네비게이션 바 (모바일 1줄 고정) */
-        .top-navbar { max-width: 1400px; margin: 10px auto 0; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: nowrap; }
+        .top-navbar { max-width: 1450px; margin: 10px auto 0; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: nowrap; }
         .top-title-group { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; flex-wrap: nowrap; }
         .top-title { font-size: 1.1rem; font-weight: 900; color: #0f172a; white-space: nowrap; }
         .top-user { font-size: 0.8rem; font-weight: 800; color: #6366f1; background: #e0e7ff; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
@@ -25,7 +25,7 @@
         .nav-pill-btn.dispatch { background: #2563eb; color: #fff; }
         .nav-pill-btn:hover { filter: brightness(0.93); }
 
-        .container { max-width: 1400px; margin: 12px auto 25px; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+        .container { max-width: 1450px; margin: 12px auto 25px; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
         .card { background: #fff; padding: 18px; border-radius: 14px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); border: 1px solid #e2e8f0; }
 
         .period-control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #2563eb; flex-wrap: wrap; gap: 8px; }
@@ -41,14 +41,14 @@
         .section-title span.sub { font-size: 0.78rem; color: #2563eb; font-weight: 700; }
 
         .table-wrap { width: 100%; overflow-x: auto; }
-        table.stats-table { width: 100%; border-collapse: collapse; min-width: 780px; font-size: 0.88rem; text-align: center; }
+        table.stats-table { width: 100%; border-collapse: collapse; min-width: 920px; font-size: 0.86rem; text-align: center; }
         table.stats-table th, table.stats-table td { border: 1px solid #e2e8f0; padding: 9px 5px; }
         table.stats-table th { background: #f8fafc; font-weight: 900; color: #334155; white-space: nowrap; }
         table.stats-table tbody tr:hover { background: #f8fafc; }
         table.stats-table tbody tr.my-row { background: #eff6ff; font-weight: 800; }
-        table.stats-table tfoot th, table.stats-table tfoot td { background: #eff6ff; font-weight: 900; color: #1d4ed8; }
+        table.stats-table tfoot th, table.stats-table tfoot td { background: #eff6ff; font-weight: 900; color: #1d4ed8; white-space: nowrap; }
 
-        .driver-name-cell { cursor: pointer; color: #2563eb; font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
+        .driver-name-cell { cursor: pointer; color: #2563eb; font-weight: 900; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
         .num-zero { color: #cbd5e1; }
         .num-active { font-weight: 700; color: #1e293b; }
         .num-total { font-weight: 900; color: #2563eb; background: #f8fafc; }
@@ -57,6 +57,8 @@
         .num-cancel { color: #94a3b8; font-weight: 600; }
         .num-duty { color: #d97706; font-weight: 800; }
         .num-off { color: #e11d48; font-weight: 800; }
+        .num-overtime { font-weight: 900; color: #0284c7; background: #f0f9ff; white-space: nowrap; }
+        .num-allowance { font-weight: 900; color: #047857; background: #ecfdf5; white-space: nowrap; }
 
         .week-opt-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 12px; font-size: 0.84rem; }
         .week-opt-bar label { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: #334155; cursor: pointer; }
@@ -66,7 +68,7 @@
         .wk-over { color: #dc2626; font-weight: 900; background: #fff1f2; }
 
         #driver-detail-box { display: none; margin-top: 14px; background: #f8fafc; border: 2px solid #2563eb; border-radius: 10px; padding: 14px; }
-        #driver-detail-box h4 { color: #2563eb; margin-bottom: 10px; font-size: 1.02rem; font-weight: 900; display: flex; justify-content: space-between; align-items: center; }
+        #driver-detail-box h4 { color: #2563eb; margin-bottom: 10px; font-size: 1.02rem; font-weight: 900; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
         .detail-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; max-height: 360px; overflow-y: auto; }
         .detail-list li { background: #fff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; font-size: 0.86rem; line-height: 1.5; }
 
@@ -80,7 +82,7 @@
         .type-tag.prev { background: #2563eb; }
         .type-tag.insp { background: #16a34a; }
 
-        /* admin3 전용 활동기록 테이블 스타일 */
+        /* admin3 전용 활동기록 스타일 */
         .audit-filter-bar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
         .audit-filter-bar select { flex: 1; min-width: 110px; padding: 7px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.84rem; font-weight: 700; font-family: inherit; }
         .audit-log-list { list-style: none; max-height: 55vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
@@ -103,7 +105,7 @@
             .period-control-bar { flex-direction: column; align-items: stretch; }
             .mode-switch { justify-content: center; }
             .period-btns { justify-content: center; }
-            table.stats-table { font-size: 0.8rem; }
+            table.stats-table { font-size: 0.78rem; }
             table.stats-table th, table.stats-table td { padding: 7px 3px; }
         }
     </style>
@@ -144,7 +146,7 @@
         </div>
     </div>
 
-    <!-- 상단 통합 네비게이션 바 (모바일 1줄 고정) -->
+    <!-- 상단 통합 네비게이션 바 -->
     <div class="top-navbar">
         <div class="top-title-group">
             <span class="top-title">📊 통합 집계</span>
@@ -159,7 +161,7 @@
     </div>
 
     <div class="container">
-        <!-- 1. 운전원별 배차 현황 카드 -->
+        <!-- 1. 운전원별 배차 및 정산 현황 카드 -->
         <div class="card">
             <div class="period-control-bar">
                 <div class="mode-switch">
@@ -175,8 +177,8 @@
             </div>
 
             <div class="section-title">
-                <span>👤 운전원별 배차 현황</span>
-                <span class="sub">💡 1박·2박은 횟수(건), 실운행 합계는 일수 기준이며 휴일근무(일)와 순수 1인배차(건)가 별도 표시됩니다.</span>
+                <span>👤 운전원별 배차 및 정산 현황</span>
+                <span class="sub">💡 이름을 누르면 상세 내역이 열리며, 우측 끝에 보상시간 합계(T)와 정산금액(일비)이 집계됩니다.</span>
             </div>
 
             <div class="table-wrap">
@@ -197,6 +199,8 @@
                             <th>4일전취소</th>
                             <th>당직</th>
                             <th>휴무</th>
+                            <th style="color:#0284c7; background:#f0f9ff;">보상시간(T)</th>
+                            <th style="color:#047857; background:#ecfdf5;">정산금액(원)</th>
                         </tr>
                     </thead>
                     <tbody id="driver-stats-tbody"></tbody>
@@ -376,7 +380,6 @@
         let currentUser = localStorage.getItem('loggedInUser') || '';
         let cachedAuditLogs = [];
 
-        // 🚀 [핵심 수정] 누락되었던 데이터 조회 범위 변수 선언 복원
         let loadedStartStr = '';
         let loadedEndStr = '';
         let baseDataLoaded = false;
@@ -410,15 +413,6 @@
                 if (modDate <= date) effectiveList = [...driverListModifiers[modDate]];
             }
             return effectiveList;
-        }
-
-        function getEffectiveEngine(date) {
-            const modDates = Object.keys(engineModifiers).sort();
-            let isB = false;
-            for (const modDate of modDates) {
-                if (modDate <= date) isB = engineModifiers[modDate];
-            }
-            return isB;
         }
 
         function getDriverStatus(date, driver) {
@@ -617,6 +611,7 @@
             }
         }
 
+        // 🚀 DB에 저장된 확정 배차(assigned)를 초기화하지 않고 그대로 유지하여 집계
         function recalculateAll() {
             allReservations.forEach(r => {
                 if (r.isCanceled) {
@@ -642,9 +637,9 @@
                 if (!loadedEndStr || reqEnd > loadedEndStr) { loadedEndStr = reqEnd; changed = true; }
                 return changed;
             } else {
-                const startDate = new Date(currentYear, currentMonth - 1, 1);
+                const startDate = new Date(currentYear, currentMonth - 1, -6);
                 const endDate = new Date(currentYear, currentMonth + 2, 0);
-                const reqStart = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+                const reqStart = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
                 const reqEnd = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
                 let changed = false;
                 if (!loadedStartStr || reqStart < loadedStartStr) { loadedStartStr = reqStart; changed = true; }
@@ -768,7 +763,7 @@
             return val === 0 ? `<span class="num-zero">0</span>` : `<span class="${activeClass}">${val}</span>`;
         }
 
-        function calculatePureWorkHours(clockInStr, clockOutStr, type) {
+        function calculatePureWorkHours(clockInStr, clockOutStr, type, isFlex = false) {
             if (!clockInStr || !clockOutStr) return null;
             let inT = parseFloat(clockInStr);
             let outT = parseFloat(clockOutStr);
@@ -778,7 +773,7 @@
             let rawDuration = Math.max(0, outT - inT);
 
             let breakHours = 0;
-            if (type && (type.includes('시티투어(야)') || type.includes('시티(야)'))) {
+            if (isFlex || (type && (type.includes('시티투어(야)') || type.includes('시티(야)')))) {
                 if (rawDuration >= 5) breakHours = 1;
             } else {
                 if ((inT <= 12 && outT >= 13) || rawDuration >= 4) {
@@ -874,7 +869,7 @@
                             wDays += 1;
                             activeRes.forEach(r => {
                                 const settle = (r.settlement && r.settlement[drv] && r.settlement[drv][dateStr]) ? r.settlement[drv][dateStr] : null;
-                                const pureH = settle ? calculatePureWorkHours(settle.clockIn, settle.clockOut, r.type) : null;
+                                const pureH = settle ? calculatePureWorkHours(settle.clockIn, settle.clockOut, r.type, settle.isFlex) : null;
                                 if (pureH !== null) {
                                     wHours += pureH;
                                 } else if (useDefault8h) {
@@ -952,7 +947,9 @@
                 driverStats[d] = {
                     pub: 0, night1: 0, night2: 0, grave: 0, city: 0, cityNight: 0, etc: 0,
                     totalActive: 0, holidayWork: 0, singleDispatch: 0,
-                    canceled: 0, duty: 0, off: 0, details: []
+                    canceled: 0, duty: 0, off: 0,
+                    overtime: 0, allowance: 0,
+                    details: []
                 };
             });
 
@@ -984,6 +981,22 @@
                 };
             });
 
+            // 1) 정산(보상시간·일비) 집계: 배차판(index.html)의 [정산 요약]과 100% 동일하게 정산 입력 날짜(dateStr) 기준으로 합산
+            allReservations.forEach(r => {
+                if (r.isCanceled || !r.settlement) return;
+                (r.assigned || []).forEach(drv => {
+                    if (!driverStats[drv] || !r.settlement[drv]) return;
+                    Object.keys(r.settlement[drv]).forEach(dateStr => {
+                        if (dateStr.startsWith(prefix) && (r.dates || []).includes(dateStr)) {
+                            const s = r.settlement[drv][dateStr];
+                            driverStats[drv].overtime += Number(s.overtime || 0);
+                            driverStats[drv].allowance += Number(s.allowance || 0);
+                        }
+                    });
+                });
+            });
+
+            // 2) 배차 건수 및 운행 일수 집계
             allReservations.forEach(r => {
                 const isStartInPeriod = (r.startDate || '').startsWith(prefix);
                 if (!isStartInPeriod) return;
@@ -1047,9 +1060,22 @@
                         if (isPureSingleBus) extraBadges.push(`1인배차`);
                         const badgeStr = extraBadges.length > 0 ? ` [${extraBadges.join('·')}]` : '';
 
+                        let settleNotes = [];
+                        if (r.settlement && r.settlement[drv]) {
+                            tripDates.forEach(dStr => {
+                                const s = r.settlement[drv][dStr];
+                                if (s && (s.clockIn || s.clockOut || s.overtime || s.allowance)) {
+                                    settleNotes.push(`💰(${dStr.slice(5)}) ${s.clockIn || '-'}~${s.clockOut || '-'} | 보상: ${Number(s.overtime || 0).toFixed(2)}T | 일비: ${Number(s.allowance || 0).toLocaleString()}원`);
+                                }
+                            });
+                        }
+                        const settleHtml = settleNotes.length > 0
+                            ? `<div style="margin-top:4px; padding:4px 7px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:4px; color:#047857; font-size:0.78rem; font-weight:700;">${settleNotes.join('<br>')}</div>`
+                            : '';
+
                         st.details.push({
                             date: tripDates.join('~'),
-                            text: `[${r.vehicle}] ${r.type}(${tripDays}일)${badgeStr} | ${r.start || '미입력'} ➔ ${r.end || '미입력'} ${r.dest ? `(${r.dest})` : ''}`,
+                            text: `[${r.vehicle}] ${r.type}(${tripDays}일)${badgeStr} | ${r.start || '미입력'} ➔ ${r.end || '미입력'} ${r.dest ? `(${r.dest})` : ''}${settleHtml}`,
                             isCanceled: false
                         });
                     }
@@ -1061,17 +1087,23 @@
             let dHtml = '';
             let sum = {
                 pub: 0, night1: 0, night2: 0, grave: 0, city: 0, cityNight: 0, etc: 0,
-                totalActive: 0, holidayWork: 0, singleDispatch: 0, canceled: 0, duty: 0, off: 0
+                totalActive: 0, holidayWork: 0, singleDispatch: 0, canceled: 0, duty: 0, off: 0,
+                overtime: 0, allowance: 0
             };
 
             targetDrivers.forEach(drv => {
                 const s = driverStats[drv];
+                s.overtime = Math.round(s.overtime * 100) / 100;
+
                 sum.pub += s.pub; sum.night1 += s.night1; sum.night2 += s.night2;
                 sum.grave += s.grave; sum.city += s.city; sum.cityNight += s.cityNight; sum.etc += s.etc;
                 sum.totalActive += s.totalActive; sum.holidayWork += s.holidayWork; sum.singleDispatch += s.singleDispatch;
                 sum.canceled += s.canceled; sum.duty += s.duty; sum.off += s.off;
+                sum.overtime += s.overtime; sum.allowance += s.allowance;
 
                 const isMe = (drv === currentUser) ? 'my-row' : '';
+                const otCell = s.overtime === 0 ? `<span class="num-zero">0</span>` : `${s.overtime.toFixed(2)} T`;
+                const alCell = s.allowance === 0 ? `<span class="num-zero">0</span>` : `${s.allowance.toLocaleString()}원`;
 
                 dHtml += `
                     <tr class="${isMe}">
@@ -1089,10 +1121,13 @@
                         <td>${formatCell(s.canceled, 'num-cancel')}</td>
                         <td>${formatCell(s.duty, 'num-duty')}</td>
                         <td>${formatCell(s.off, 'num-off')}</td>
+                        <td class="num-overtime">${otCell}</td>
+                        <td class="num-allowance">${alCell}</td>
                     </tr>`;
             });
             dTbody.innerHTML = dHtml;
 
+            sum.overtime = Math.round(sum.overtime * 100) / 100;
             dTfoot.innerHTML = `
                 <tr>
                     <th>총 합계</th>
@@ -1109,6 +1144,8 @@
                     <td>${sum.canceled}</td>
                     <td>${sum.duty}</td>
                     <td>${sum.off}</td>
+                    <td style="color:#0284c7; background:#e0f2fe;">${sum.overtime.toFixed(2)} T</td>
+                    <td style="color:#047857; background:#d1fae5;">${sum.allowance.toLocaleString()}원</td>
                 </tr>`;
 
             window._currentDriverStats = driverStats;
@@ -1265,7 +1302,7 @@
             const ul = document.getElementById('driver-detail-list');
             const pText = statsMode === 'year' ? `${currentYear}년 연간` : `${currentMonth + 1}월`;
 
-            title.innerText = `📋 [${drv}] ${pText} 상세 배차 내역 (실운행 ${st.totalActive}일 · 휴일근무 ${st.holidayWork}일 · 1인배차 ${st.singleDispatch}건 / 취소 ${st.canceled}건)`;
+            title.innerText = `📋 [${drv}] ${pText} 상세 내역 (실운행 ${st.totalActive}일 · 휴일 ${st.holidayWork}일 · 보상 ${st.overtime.toFixed(2)}T · 정산 ${st.allowance.toLocaleString()}원)`;
             if (st.details.length === 0) {
                 ul.innerHTML = `<li style="color:#64748b;">해당 기간의 배차 내역이 없습니다.</li>`;
             } else {
@@ -1285,7 +1322,7 @@
             const viewport = document.querySelector('meta[name="viewport"]');
             const btn = document.getElementById('btn-toggle-view');
             if (isMobileView) {
-                viewport.setAttribute('content', 'width=1100, user-scalable=yes');
+                viewport.setAttribute('content', 'width=1150, user-scalable=yes');
                 if (btn) {
                     btn.innerText = '📱폰화면';
                     btn.style.background = '#facc15';
@@ -1317,7 +1354,6 @@
 
         window.onload = () => {
             checkAuth();
-            // 인터넷 지연 시에도 로딩창이 3.5초 뒤에는 무조건 해제되도록 안전장치 추가
             setTimeout(() => {
                 const overlay = document.getElementById('loading-overlay');
                 if (overlay && overlay.style.display !== 'none') overlay.style.display = 'none';
