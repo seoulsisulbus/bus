@@ -2243,8 +2243,15 @@
             document.getElementById('settle-in').value = mySettle.clockIn || '';
             document.getElementById('settle-out').value = mySettle.clockOut || '';
 
-            // 🔒 잠금 1: 출근 또는 퇴근 시간이 이미 입력된 정산은 [삭제] 전까지 입력칸과 저장 버튼 완전 잠금 (모바일 줄바꿈 방지 문구)
-            const isLocked = Boolean(mySettle.clockIn || mySettle.clockOut);
+            // 본인 배차가 아니거나 취소된 배차는 정산창 숨김 (기존 입력값이 남아있으면 삭제할 수 있게만 표시)
+            const hasMySettle = Boolean(mySettle.clockIn || mySettle.clockOut);
+            const settleBox = document.getElementById('settlement-container');
+            if (settleBox) {
+                settleBox.style.display = ((isAssignedMe && !d.isCanceled) || hasMySettle) ? 'block' : 'none';
+            }
+
+            // 🔒 잠금 1: 이미 입력됐거나 본인 배차가 아닌 경우 입력칸·저장 버튼 잠금
+            const isLocked = hasMySettle || !isAssignedMe || d.isCanceled;
             document.getElementById('settle-in').disabled = isLocked;
             document.getElementById('settle-out').disabled = isLocked;
             document.getElementById('settle-flex').disabled = isLocked;
@@ -2446,6 +2453,13 @@
             if (!resId || !clickedDate) return;
             const d = allReservations.find(r => r.id === resId);
             if (!d) return;
+
+            // 본인이 배정된 정상 배차에만 정산 입력 허용
+            const assignedList = (d.assigned || []).filter(n => n && n !== '미지정');
+            if (d.isCanceled || !assignedList.includes(currentUser)) {
+                alert('본인이 배정된 운행 배차에만 정산을 입력할 수 있습니다.');
+                return;
+            }
 
             // 🔒 이미 저장된 정산이 있으면 삭제 전 덮어쓰기 절대 차단
             const existingSettle = (d.settlement && d.settlement[currentUser] && d.settlement[currentUser][clickedDate]) ? d.settlement[currentUser][clickedDate] : null;
