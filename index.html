@@ -1008,14 +1008,38 @@
         function getShortType(type) {
             if (!type) return '기타';
             if (type.includes('공공')) return '공공';
-            if (type.includes('1박')) return '1박';
-            if (type.includes('2박')) return '2박';
+            if (type.includes('1박')) return '일박';
+            if (type.includes('2박')) return '이박';
             if (type === '서울운행' || type === '서울') return '서울'; 
             if (type.includes('시티투어(야)') || type.includes('시티(야)')) return '시티(야)';
             if (type.includes('시티')) return '시티';
             if (type.includes('성묘')) return '성묘';
             if (type.includes('나들이')) return '나들이'; 
             return '기타';
+        }
+
+        // 화면 표시 전용 정렬 (배차 순번·선운행 계산에는 영향 없음)
+        function sortForDisplay(a, b) {
+            const getDispTypeRank = (t) => {
+                if (!t) return 99;
+                if (t.includes('2박')) return 1; // 이박
+                if (t.includes('1박')) return 2; // 일박
+                if (t.includes('공공')) return 3; // 공공
+                if (t.includes('성묘')) return 4; // 성묘
+                if (t.includes('서울')) return 5; // 서울
+                if (t.includes('나들이')) return 6; // 나들이
+                if (t.includes('시티투어(야)') || t.includes('시티(야)')) return 8; // 시티(야)
+                if (t.includes('시티')) return 7; // 시티
+                return 9; // 기타
+            };
+            const rA = getDispTypeRank(a.type);
+            const rB = getDispTypeRank(b.type);
+            if (rA !== rB) return rA - rB;
+
+            const vehOrder = ['1호차', '2호차', '3호차', '예비버스', '11호차', '12호차', '13호차', '14호차', '3818'];
+            const vA = vehOrder.indexOf(a.vehicle);
+            const vB = vehOrder.indexOf(b.vehicle);
+            return (vA === -1 ? 99 : vA) - (vB === -1 ? 99 : vB);
         }
 
         function getDispName(name) {
@@ -2134,7 +2158,8 @@
             const statusContainer = document.getElementById(`cell_status_${date}`);
             if (!tagsContainer || !statusContainer) return;
 
-            const activeReservations = allReservations.filter(r => (r.dates || []).includes(date));
+            // 1) activeReservations 줄 뒤에 .sort(sortForDisplay) 추가
+            const activeReservations = allReservations.filter(r => (r.dates || []).includes(date)).sort(sortForDisplay);
             let tagsHTML = '';
 
             if (typeof dailyMemos !== 'undefined' && dailyMemos[date]) {
@@ -2151,8 +2176,8 @@
 
                 if (shortTypeStr === '공공') { boxClass = 'pub'; badgeClass = 'pub'; }
                 else if (shortTypeStr === '성묘') { boxClass = 'grave'; badgeClass = 'grave'; }
-                else if (shortTypeStr === '1박') { boxClass = 'night1'; badgeClass = 'night1'; }
-                else if (shortTypeStr === '2박') { boxClass = 'night2'; badgeClass = 'night2'; }
+                else if (shortTypeStr === '일박') { boxClass = 'night1'; badgeClass = 'night1'; }
+                else if (shortTypeStr === '이박') { boxClass = 'night2'; badgeClass = 'night2'; }
                 else if (shortTypeStr === '서울') { boxClass = 'seoul'; badgeClass = 'seoul'; }
                 else if (shortTypeStr === '시티' || shortTypeStr === '시티(야)') { boxClass = 'citytour'; badgeClass = 'citytour'; }
                 else if (shortTypeStr === '기타') { boxClass = 'default'; badgeClass = 'default'; }
@@ -2650,7 +2675,8 @@
 
         function renderDispatchResult(date) {
             const contentUl = document.getElementById('result-content');
-            const activeReservations = allReservations.filter(r => (r.dates || []).includes(date));
+            // 1) activeReservations 줄 뒤에 .sort(sortForDisplay) 추가
+            const activeReservations = allReservations.filter(r => (r.dates || []).includes(date)).sort(sortForDisplay);
             let html = '';
 
             updateVehicleFormBadges(date);
